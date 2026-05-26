@@ -1,0 +1,18 @@
+<svg version="1.2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+	<style>
+		tspan { white-space:pre } 
+		.s0 { fill: #f2ead9 } 
+		.s1 { fill: #8d493b } 
+		.s2 { opacity: .28;fill: none;stroke: #f2ead9;stroke-width: 1.5 } 
+		.t3 { font-size: 30px;fill: #f8f2e5;font-family: "' Noto  Sans  TC'" } 
+	</style>
+	<g id="Folder 1">
+		<path fill-rule="evenodd" class="s0" d="m17.19 0h65.62c9.49 0 17.19 7.7 17.19 17.19v65.62c0 9.49-7.7 17.19-17.19 17.19h-65.62c-9.49 0-17.19-7.7-17.19-17.19v-65.62c0-9.49 7.7-17.19 17.19-17.19z"/>
+		<path fill-rule="evenodd" class="s1" d="m20.31 12.5h59.38c4.31 0 7.81 3.5 7.81 7.81v59.38c0 4.31-3.5 7.81-7.81 7.81h-59.38c-4.31 0-7.81-3.5-7.81-7.81v-59.38c0-4.31 3.5-7.81 7.81-7.81z"/>
+		<path fill-rule="evenodd" class="s2" d="m22.66 17.97h54.68c2.59 0 4.69 2.1 4.69 4.69v54.68c0 2.59-2.1 4.69-4.69 4.69h-54.68c-2.59 0-4.69-2.1-4.69-4.69v-54.68c0-2.59 2.1-4.69 4.69-4.69z"/>
+		<text id="境" style="transform: matrix(1.563,0,0,1.563,50,67.188)">
+			<tspan x="-15" y="0" class="t3">境
+</tspan>
+		</text>
+	</g>
+</svg>

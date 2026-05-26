@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="11" fill="#f2ead9"/>
+  <rect x="8" y="8" width="48" height="48" rx="5" fill="#8d493b"/>
+  <rect x="11.5" y="11.5" width="41" height="41" rx="3" fill="none" stroke="#f2ead9" stroke-opacity=".28" stroke-width="1.5"/>
+  <text
+    x="32"
+    y="43"
+    fill="#f8f2e5"
+    font-family="'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif"
+    font-size="30"
+    font-weight="500"
+    text-anchor="middle"
+  >境</text>
+</svg>
