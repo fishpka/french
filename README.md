@@ -1,4 +1,4 @@
-# LexiScope
+# French
 
 A local React website for analyzing French articles.
 

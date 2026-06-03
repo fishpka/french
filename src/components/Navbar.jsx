@@ -25,19 +25,20 @@ export default function Navbar({ brand, links }) {
             {link.label}
           </a>
         ))}
-        <a className="navbar__cta" href="#contact" onClick={closeMenu}>
+        <a className="navbar__cta" href="#analyzer" onClick={closeMenu}>
           開始分析
         </a>
       </nav>
 
       <button
-        className="navbar__toggle"
+        className={`navbar__toggle ${isOpen ? 'navbar__toggle--open' : ''}`}
         type="button"
         aria-label={isOpen ? '關閉選單' : '開啟選單'}
         aria-expanded={isOpen}
         onClick={() => setIsOpen((open) => !open)}
       >
-        {isOpen ? <X size={22} /> : <Menu size={22} />}
+        <Menu className="navbar__icon navbar__icon--menu" size={22} aria-hidden="true" />
+        <X className="navbar__icon navbar__icon--close" size={22} aria-hidden="true" />
       </button>
     </header>
   );

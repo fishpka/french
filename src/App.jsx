@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BarChart3, Copy, FileText, RefreshCcw, Sparkles } from 'lucide-react';
 import Navbar from './components/Navbar.jsx';
 
@@ -119,29 +119,68 @@ export default function App() {
   const maxCount = analysis.topWords[0]?.count || 1;
   const density = analysis.words.length ? Math.round((analysis.uniqueCount / analysis.contentWords.length) * 100) : 0;
 
+  useEffect(() => {
+    const elements = document.querySelectorAll('[data-reveal]');
+
+    if (!('IntersectionObserver' in window)) {
+      elements.forEach((element) => element.classList.add('is-visible'));
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { rootMargin: '0px 0px -12% 0px', threshold: 0.12 },
+    );
+
+    elements.forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <>
-      <Navbar brand="LexiScope" links={links} />
-      <main className="app-shell">
+      <Navbar brand="French" links={links} />
+      <main className="app-shell" id="home">
         <section className="intro" id="analyzer">
-          <div className="intro__copy">
-            <p className="eyebrow">French frequency studio</p>
-            <h1>貼上法文文章，自動找出高頻詞與重複句型。</h1>
+          <div className="intro__copy" data-reveal>
+            <div className="intro__meta">
+              <p className="eyebrow">French frequency studio</p>
+              <p>Issue 01 / Text analysis</p>
+            </div>
+            <h1>
+              <span>貼上法文文章，</span>
+              <span>讀出文字的節奏。</span>
+            </h1>
             <p>
               適合 B1-C1 作文、口說稿與新聞文章。工具會過濾常見虛詞，保留更有學習價值的主題詞，
               並抓出常用論述句型。
             </p>
           </div>
-          <div className="visual-strip" aria-label="Analysis preview">
+          <div className="visual-strip" aria-label="Analysis preview" data-reveal>
+            <p className="visual-strip__label">Live frequency</p>
             {analysis.topWords.slice(0, 8).map((item, index) => (
-              <span key={item.word} style={{ '--height': `${34 + index * 7}px` }}>
+              <span key={item.word} style={{ '--height': `${34 + index * 7}px`, '--index': index }}>
                 {item.word}
               </span>
             ))}
           </div>
         </section>
 
-        <section className="workspace">
+        <div className="ticker" aria-hidden="true">
+          <div className="ticker__track">
+            {[...analysis.topWords.slice(0, 8), ...analysis.topWords.slice(0, 8)].map((item, index) => (
+              <span key={`${item.word}-${index}`}>{item.word} <strong>{item.count}</strong></span>
+            ))}
+          </div>
+        </div>
+
+        <section className="workspace" data-reveal>
           <div className="editor-panel">
             <div className="panel-heading">
               <div>
@@ -170,22 +209,22 @@ export default function App() {
           <aside className="summary-panel" id="summary">
             <p className="eyebrow">Summary</p>
             <div className="metric-grid">
-              <article>
+              <article style={{ '--index': 0 }}>
                 <FileText size={18} />
                 <span>總詞數</span>
                 <strong>{analysis.words.length}</strong>
               </article>
-              <article>
+              <article style={{ '--index': 1 }}>
                 <Sparkles size={18} />
                 <span>內容詞</span>
                 <strong>{analysis.contentWords.length}</strong>
               </article>
-              <article>
+              <article style={{ '--index': 2 }}>
                 <BarChart3 size={18} />
                 <span>不同詞</span>
                 <strong>{analysis.uniqueCount}</strong>
               </article>
-              <article>
+              <article style={{ '--index': 3 }}>
                 <span>句子</span>
                 <strong>{analysis.sentenceCount}</strong>
                 <small>詞彙密度 {Number.isFinite(density) ? density : 0}%</small>
@@ -194,7 +233,7 @@ export default function App() {
           </aside>
         </section>
 
-        <section className="analysis-grid" id="charts">
+        <section className="analysis-grid" id="charts" data-reveal>
           <section className="chart-panel">
             <div className="panel-heading">
               <div>
@@ -203,8 +242,8 @@ export default function App() {
               </div>
             </div>
             <div className="bar-chart">
-              {analysis.topWords.slice(0, 12).map((item) => (
-                <div className="bar-row" key={item.word}>
+              {analysis.topWords.slice(0, 12).map((item, index) => (
+                <div className="bar-row" key={item.word} style={{ '--index': index }}>
                   <span>{item.word}</span>
                   <div className="bar-track">
                     <div style={{ width: `${(item.count / maxCount) * 100}%` }} />
@@ -233,7 +272,7 @@ export default function App() {
           </section>
         </section>
 
-        <section className="patterns" id="patterns">
+        <section className="patterns" id="patterns" data-reveal>
           <div className="section-title">
             <p className="eyebrow">Patterns</p>
             <h2>重複句型與常見片語</h2>
