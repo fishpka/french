@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { BarChart3, Copy, FileText, RefreshCcw, Sparkles } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Copy, RefreshCcw, Trash2 } from 'lucide-react';
 import Navbar from './components/Navbar.jsx';
 
 const links = [
@@ -8,6 +8,9 @@ const links = [
   { label: '句型', href: '#patterns' },
   { label: '摘要', href: '#summary' },
 ];
+
+const userWordStorageKey = 'french:user-word-frequency';
+const userWordStorageLimit = 300;
 
 const sampleText = `Aujourd'hui, les réseaux sociaux occupent une place importante dans notre vie quotidienne. Je pense que cette évolution peut être positive, car elle permet aux personnes de communiquer plus rapidement et de partager des informations.
 
@@ -57,6 +60,66 @@ function countItems(items) {
   return [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 }
 
+function readUserWordFrequency() {
+  if (typeof window === 'undefined') return [];
+
+  try {
+    const value = window.localStorage.getItem(userWordStorageKey);
+    if (!value) return [];
+
+    const records = JSON.parse(value);
+    if (!Array.isArray(records)) return [];
+
+    return records
+      .filter((record) => (
+        record
+        && typeof record.word === 'string'
+        && Number.isFinite(record.count)
+        && typeof record.lastAnalyzedAt === 'string'
+      ))
+      .map((record) => ({
+        word: record.word,
+        count: record.count,
+        lastAnalyzedAt: record.lastAnalyzedAt,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+function saveUserWordFrequency(records) {
+  if (typeof window === 'undefined') return;
+
+  try {
+    window.localStorage.setItem(userWordStorageKey, JSON.stringify(records));
+  } catch {
+    // localStorage can be unavailable in restrictive browser modes.
+  }
+}
+
+function mergeUserWordFrequency(records, wordCounts, analyzedAt) {
+  const map = new Map(records.map((record) => [record.word, record]));
+
+  wordCounts.forEach(({ word, count }) => {
+    if (!word || !Number.isFinite(count) || count <= 0) return;
+
+    const previous = map.get(word);
+    map.set(word, {
+      word,
+      count: (previous?.count || 0) + count,
+      lastAnalyzedAt: analyzedAt,
+    });
+  });
+
+  return [...map.values()]
+    .sort((a, b) => b.count - a.count || a.word.localeCompare(b.word))
+    .slice(0, userWordStorageLimit);
+}
+
+function getWordCountSignature(wordCounts) {
+  return wordCounts.map(({ word, count }) => `${word}:${count}`).join('|');
+}
+
 function getNgrams(words) {
   const phrases = [];
   for (let size = 2; size <= 5; size += 1) {
@@ -87,7 +150,8 @@ function getSentenceStarts(text) {
 function analyzeText(text) {
   const words = tokenize(text);
   const contentWords = words.filter((word) => !stopwords.has(word) && word.length >= 3);
-  const topWords = countItems(contentWords).slice(0, 24).map(([word, count]) => ({ word, count }));
+  const wordCounts = countItems(contentWords).map(([word, count]) => ({ word, count }));
+  const topWords = wordCounts.slice(0, 24);
   const allWordCounts = countItems(words);
   const repeatedPhrases = getNgrams(words);
   const sentenceStarts = getSentenceStarts(text);
@@ -103,6 +167,7 @@ function analyzeText(text) {
   return {
     words,
     contentWords,
+    wordCounts,
     topWords,
     allWordCounts,
     repeatedPhrases,
@@ -115,9 +180,41 @@ function analyzeText(text) {
 
 export default function App() {
   const [text, setText] = useState(sampleText);
+  const [userWords, setUserWords] = useState(() => readUserWordFrequency());
   const analysis = useMemo(() => analyzeText(text), [text]);
   const maxCount = analysis.topWords[0]?.count || 1;
-  const density = analysis.words.length ? Math.round((analysis.uniqueCount / analysis.contentWords.length) * 100) : 0;
+  const initialSignature = useMemo(() => getWordCountSignature(analyzeText(sampleText).wordCounts), []);
+  const lastStoredSignatureRef = useRef(initialSignature);
+  const topUserWords = userWords.slice(0, 10);
+
+  useEffect(() => {
+    const signature = getWordCountSignature(analysis.wordCounts);
+    if (!signature || signature === lastStoredSignatureRef.current) return undefined;
+
+    const timer = window.setTimeout(() => {
+      const analyzedAt = new Date().toISOString();
+      setUserWords((currentWords) => {
+        const merged = mergeUserWordFrequency(currentWords, analysis.wordCounts, analyzedAt);
+        saveUserWordFrequency(merged);
+        return merged;
+      });
+      lastStoredSignatureRef.current = signature;
+    }, 900);
+
+    return () => window.clearTimeout(timer);
+  }, [analysis.wordCounts]);
+
+  const clearUserWords = () => {
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.removeItem(userWordStorageKey);
+      } catch {
+        // localStorage can be unavailable in restrictive browser modes.
+      }
+    }
+    setUserWords([]);
+    lastStoredSignatureRef.current = getWordCountSignature(analysis.wordCounts);
+  };
 
   useEffect(() => {
     const elements = document.querySelectorAll('[data-reveal]');
@@ -207,29 +304,34 @@ export default function App() {
           </div>
 
           <aside className="summary-panel" id="summary">
-            <p className="eyebrow">Summary</p>
-            <div className="metric-grid">
-              <article style={{ '--index': 0 }}>
-                <FileText size={18} />
-                <span>總詞數</span>
-                <strong>{analysis.words.length}</strong>
-              </article>
-              <article style={{ '--index': 1 }}>
-                <Sparkles size={18} />
-                <span>內容詞</span>
-                <strong>{analysis.contentWords.length}</strong>
-              </article>
-              <article style={{ '--index': 2 }}>
-                <BarChart3 size={18} />
-                <span>不同詞</span>
-                <strong>{analysis.uniqueCount}</strong>
-              </article>
-              <article style={{ '--index': 3 }}>
-                <span>句子</span>
-                <strong>{analysis.sentenceCount}</strong>
-                <small>詞彙密度 {Number.isFinite(density) ? density : 0}%</small>
-              </article>
-            </div>
+            <section className="user-words" aria-labelledby="user-words-title">
+              <div className="user-words__heading">
+                <div>
+                  <p className="eyebrow">Local history</p>
+                  <h2 id="user-words-title">你最常使用的詞語</h2>
+                </div>
+                <button type="button" onClick={clearUserWords} disabled={!userWords.length}>
+                  <Trash2 size={15} />
+                  清除我的紀錄
+                </button>
+              </div>
+              <p className="user-words__privacy">
+                資料只會儲存在你的瀏覽器中，不會上傳到伺服器。
+              </p>
+              {topUserWords.length ? (
+                <div className="user-word-list">
+                  {topUserWords.map((item, index) => (
+                    <div className="user-word-row" key={item.word}>
+                      <span>{index + 1}</span>
+                      <strong>{item.word}</strong>
+                      <small>{item.count}</small>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="empty-state">分析自己的法文文本後，這裡會顯示前 10 個常用詞。</p>
+              )}
+            </section>
           </aside>
         </section>
 
