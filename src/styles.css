@@ -571,6 +571,116 @@ textarea:focus {
   color: #70665b;
 }
 
+.cefr-panel {
+  margin-top: 16px;
+}
+
+.cefr-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.cefr-card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(68, 61, 51, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 252, 245, 0.84);
+  box-shadow: 0 18px 48px rgba(65, 55, 43, 0.07);
+}
+
+.cefr-card__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cefr-card__heading strong {
+  color: #20231f;
+  font-size: 1.18rem;
+}
+
+.cefr-card__heading span {
+  color: #c7563f;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.cefr-meter {
+  height: 7px;
+  margin: 12px 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e7dfd2;
+}
+
+.cefr-meter div {
+  height: 100%;
+  border-radius: inherit;
+  background: #2f6b5f;
+  transition: width 360ms var(--motion-ease);
+}
+
+.cefr-card[data-level="B2"] .cefr-meter div,
+.cefr-card[data-level="C1"] .cefr-meter div,
+.cefr-card[data-level="C2"] .cefr-meter div {
+  background: #c7563f;
+}
+
+.cefr-card[data-level="Unknown"] .cefr-meter div {
+  background: #70665b;
+}
+
+.cefr-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.cefr-stats div {
+  min-width: 0;
+}
+
+.cefr-stats dt {
+  margin: 0 0 3px;
+  color: #746b5f;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.cefr-stats dd {
+  margin: 0;
+  color: #20231f;
+  font-size: 1.2rem;
+  font-weight: 850;
+}
+
+.cefr-words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cefr-words span {
+  max-width: 100%;
+  overflow: hidden;
+  padding: 5px 7px;
+  border: 1px solid rgba(68, 61, 51, 0.14);
+  border-radius: 999px;
+  color: #33332d;
+  font-size: 0.78rem;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cefr-words small {
+  color: #746b5f;
+}
+
 .patterns {
   margin-top: 16px;
 }
@@ -697,6 +807,7 @@ textarea:focus {
   .intro,
   .workspace,
   .analysis-grid,
+  .cefr-grid,
   .pattern-grid {
     grid-template-columns: 1fr;
   }
@@ -1255,6 +1366,78 @@ textarea:focus {
   color: var(--accent);
 }
 
+.cefr-panel {
+  margin-top: clamp(56px, 8vw, 88px);
+}
+
+.cefr-grid {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0;
+}
+
+.cefr-card {
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 16px 12px 18px 0;
+}
+
+.cefr-card__heading strong {
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 1.24rem;
+  font-weight: 500;
+}
+
+.cefr-card__heading span {
+  color: var(--accent);
+  font-family: var(--display);
+  font-weight: 500;
+}
+
+.cefr-meter {
+  height: 2px;
+  margin: 14px 0;
+  border-radius: 0;
+  background: var(--line);
+}
+
+.cefr-meter div,
+.cefr-card[data-level="B2"] .cefr-meter div,
+.cefr-card[data-level="C1"] .cefr-meter div,
+.cefr-card[data-level="C2"] .cefr-meter div,
+.cefr-card[data-level="Unknown"] .cefr-meter div {
+  border-radius: 0;
+  background: var(--accent);
+}
+
+.cefr-stats dt {
+  color: var(--ink-muted);
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+}
+
+.cefr-stats dd {
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 1.45rem;
+  font-weight: 400;
+}
+
+.cefr-words span {
+  border-color: var(--line);
+  border-radius: 0;
+  color: var(--ink);
+  font-family: var(--display);
+  font-weight: 500;
+}
+
+.cefr-words small {
+  color: var(--ink-muted);
+}
+
 .patterns {
   margin-top: clamp(62px, 9vw, 102px);
 }
@@ -1410,6 +1593,7 @@ textarea:focus {
   .intro,
   .workspace,
   .analysis-grid,
+  .cefr-grid,
   .pattern-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1459,6 +1643,10 @@ textarea:focus {
 
   .analysis-grid {
     margin-top: 54px;
+  }
+
+  .cefr-grid {
+    gap: 0;
   }
 
   .pattern-grid {

@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Copy, RefreshCcw, Trash2 } from 'lucide-react';
 import Navbar from './components/Navbar.jsx';
+import cefrVocabulary from './data/cefrVocabulary.js';
 
 const links = [
   { label: '分析器', href: '#analyzer' },
   { label: '圖表', href: '#charts' },
+  { label: 'CEFR', href: '#cefr' },
   { label: '句型', href: '#patterns' },
   { label: '摘要', href: '#summary' },
 ];
@@ -44,6 +46,8 @@ const patternRules = [
   { label: '結論', regex: /\b(en conclusion|pour conclure|en résumé|finalement)\b/gi },
   { label: '平衡論述', regex: /\b(d'un côté|de l'autre côté|non seulement|mais aussi|tout dépend)\b/gi },
 ];
+
+const cefrLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'Unknown'];
 
 function normalizeWord(word) {
   return word.toLowerCase().replace(/[’]/g, "'").replace(/^['-]+|['-]+$/g, '');
@@ -147,6 +151,36 @@ function getSentenceStarts(text) {
     .map(([phrase, count]) => ({ phrase, count }));
 }
 
+function getCefrAnalysis(wordCounts) {
+  const totalOccurrences = wordCounts.reduce((sum, item) => sum + item.count, 0);
+  const levelMap = new Map(cefrLevels.map((level) => [level, {
+    level,
+    uniqueWords: 0,
+    totalCount: 0,
+    percentage: 0,
+    topWords: [],
+  }]));
+
+  wordCounts.forEach(({ word, count }) => {
+    const level = cefrVocabulary[word] || 'Unknown';
+    const record = levelMap.get(level);
+    record.uniqueWords += 1;
+    record.totalCount += count;
+    record.topWords.push({ word, count });
+  });
+
+  return cefrLevels.map((level) => {
+    const record = levelMap.get(level);
+    return {
+      ...record,
+      percentage: totalOccurrences ? (record.totalCount / totalOccurrences) * 100 : 0,
+      topWords: record.topWords
+        .sort((a, b) => b.count - a.count || a.word.localeCompare(b.word))
+        .slice(0, 5),
+    };
+  });
+}
+
 function analyzeText(text) {
   const words = tokenize(text);
   const contentWords = words.filter((word) => !stopwords.has(word) && word.length >= 3);
@@ -155,6 +189,7 @@ function analyzeText(text) {
   const allWordCounts = countItems(words);
   const repeatedPhrases = getNgrams(words);
   const sentenceStarts = getSentenceStarts(text);
+  const cefrAnalysis = getCefrAnalysis(wordCounts);
   const patternMatches = patternRules.map((rule) => {
     const matches = [...text.matchAll(rule.regex)].map((match) => match[0].toLowerCase());
     return {
@@ -170,6 +205,7 @@ function analyzeText(text) {
     wordCounts,
     topWords,
     allWordCounts,
+    cefrAnalysis,
     repeatedPhrases,
     sentenceStarts,
     patternMatches,
@@ -372,6 +408,45 @@ export default function App() {
               ))}
             </div>
           </section>
+        </section>
+
+        <section className="cefr-panel" id="cefr" data-reveal>
+          <div className="section-title">
+            <p className="eyebrow">CEFR</p>
+            <h2>CEFR 詞彙難度分析</h2>
+          </div>
+          <div className="cefr-grid">
+            {analysis.cefrAnalysis.map((level) => (
+              <article className="cefr-card" key={level.level} data-level={level.level}>
+                <div className="cefr-card__heading">
+                  <strong>{level.level}</strong>
+                  <span>{level.percentage.toFixed(1)}%</span>
+                </div>
+                <div className="cefr-meter" aria-hidden="true">
+                  <div style={{ width: `${level.percentage}%` }} />
+                </div>
+                <dl className="cefr-stats">
+                  <div>
+                    <dt>詞數</dt>
+                    <dd>{level.uniqueWords}</dd>
+                  </div>
+                  <div>
+                    <dt>出現</dt>
+                    <dd>{level.totalCount}</dd>
+                  </div>
+                </dl>
+                {level.topWords.length ? (
+                  <div className="cefr-words">
+                    {level.topWords.map((item) => (
+                      <span key={item.word}>{item.word} <small>{item.count}</small></span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="empty-state">沒有詞彙</p>
+                )}
+              </article>
+            ))}
+          </div>
         </section>
 
         <section className="patterns" id="patterns" data-reveal>
