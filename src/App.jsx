@@ -49,6 +49,8 @@ const patternRules = [
 ];
 
 const cefrLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'Unknown'];
+const autoDictionaryDefaultLevel = 'B2';
+const autoDictionaryLimit = 20;
 
 function normalizeWord(word) {
   return word.toLowerCase().replace(/[’]/g, "'").replace(/^['-]+|['-]+$/g, '');
@@ -108,6 +110,15 @@ function normalizeFrenchWord(word) {
 function tokenize(text) {
   const matches = text.match(/[a-zàâäçéèêëîïôöùûüÿñæœ]+(?:[’'-][a-zàâäçéèêëîïôöùûüÿñæœ]+)*/gi);
   return matches ? matches.map(normalizeWord).filter((word) => word.length > 1) : [];
+}
+
+function getRawWordRecords(text) {
+  const wordPattern = /[a-zàâäçéèêëîïôöùûüÿñæœ]+(?:[’'-][a-zàâäçéèêëîïôöùûüÿñæœ]+)*/gi;
+  return [...text.matchAll(wordPattern)].map((match) => ({
+    word: match[0],
+    normalizedWord: normalizeWord(match[0]),
+    index: match.index ?? 0,
+  }));
 }
 
 function countItems(items) {
@@ -236,6 +247,92 @@ function getCefrAnalysis(wordCounts) {
   });
 }
 
+function isSentenceStart(text, index) {
+  const before = text.slice(0, index).trimEnd();
+  return !before || /[.!?。！？\n]$/.test(before);
+}
+
+function getWordShapeStats(text) {
+  const stats = new Map();
+
+  getRawWordRecords(text).forEach(({ word, normalizedWord, index }) => {
+    const current = stats.get(normalizedWord) || {
+      hasDigit: false,
+      hasLowercaseStart: false,
+      hasCapitalizedNonSentenceStart: false,
+      hasAcronymShape: false,
+    };
+    const firstLetter = word.match(/[a-zàâäçéèêëîïôöùûüÿñæœ]/i)?.[0] || '';
+    const uppercaseLetters = word.match(/[A-ZÀÂÄÇÉÈÊËÎÏÔÖÙÛÜŸÑÆŒ]/g) || [];
+
+    current.hasDigit = current.hasDigit || /\d/.test(word);
+    current.hasLowercaseStart = current.hasLowercaseStart || Boolean(firstLetter && firstLetter === firstLetter.toLowerCase());
+    current.hasCapitalizedNonSentenceStart = current.hasCapitalizedNonSentenceStart || (
+      Boolean(firstLetter && firstLetter === firstLetter.toUpperCase() && firstLetter !== firstLetter.toLowerCase())
+      && !isSentenceStart(text, index)
+    );
+    current.hasAcronymShape = current.hasAcronymShape || (
+      uppercaseLetters.length >= 2
+      && word.length <= 8
+      && uppercaseLetters.length >= Math.max(2, Math.floor(word.length * 0.6))
+    );
+
+    stats.set(normalizedWord, current);
+  });
+
+  return stats;
+}
+
+function shouldExcludeDictionaryCandidate(word, shapeStats) {
+  if (/\d/.test(word)) return true;
+  if (!/[a-zàâäçéèêëîïôöùûüÿñæœ]/i.test(word)) return true;
+  if (word.length < 3) return true;
+  if (shapeStats?.hasDigit || shapeStats?.hasAcronymShape) return true;
+  return Boolean(shapeStats?.hasCapitalizedNonSentenceStart && !shapeStats?.hasLowercaseStart);
+}
+
+function getAutoDictionaryDraft(wordCounts, text) {
+  const shapeStats = getWordShapeStats(text);
+  const entries = wordCounts
+    .map(({ word, count }) => {
+      const normalizedWord = normalizeFrenchWord(word);
+      const originalLevel = cefrVocabulary[word];
+      const normalizedLevel = cefrVocabulary[normalizedWord];
+      return {
+        word,
+        normalizedWord,
+        count,
+        level: originalLevel || normalizedLevel || 'Unknown',
+      };
+    })
+    .filter((entry) => entry.level === 'Unknown')
+    .filter((entry) => !shouldExcludeDictionaryCandidate(entry.word, shapeStats.get(entry.word)))
+    .sort((a, b) => b.count - a.count || a.word.localeCompare(b.word))
+    .slice(0, autoDictionaryLimit)
+    .map((entry) => ({
+      word: entry.normalizedWord,
+      count: entry.count,
+      level: autoDictionaryDefaultLevel,
+    }));
+
+  const uniqueEntries = [...new Map(entries.map((entry) => [entry.word, entry])).values()];
+  const json = uniqueEntries.length
+    ? JSON.stringify(
+      uniqueEntries.reduce((draft, entry) => ({
+        ...draft,
+        [entry.word]: entry.level,
+      }), {}),
+      null,
+      2,
+    )
+    : '{}';
+
+  return {
+    entries: uniqueEntries,
+    json,
+  };
+}
+
 function analyzeText(text) {
   const words = tokenize(text);
   const contentWords = words.filter((word) => !stopwords.has(word) && word.length >= 3);
@@ -245,6 +342,7 @@ function analyzeText(text) {
   const repeatedPhrases = getNgrams(words);
   const sentenceStarts = getSentenceStarts(text);
   const cefrAnalysis = getCefrAnalysis(wordCounts);
+  const autoDictionaryDraft = getAutoDictionaryDraft(wordCounts, text);
   const patternMatches = patternRules.map((rule) => {
     const matches = [...text.matchAll(rule.regex)].map((match) => match[0].toLowerCase());
     return {
@@ -261,6 +359,7 @@ function analyzeText(text) {
     topWords,
     allWordCounts,
     cefrAnalysis,
+    autoDictionaryDraft,
     repeatedPhrases,
     sentenceStarts,
     patternMatches,
@@ -272,6 +371,7 @@ function analyzeText(text) {
 export default function App() {
   const [text, setText] = useState(sampleText);
   const [userWords, setUserWords] = useState(() => readUserWordFrequency());
+  const [dictionaryCopyStatus, setDictionaryCopyStatus] = useState('');
   const analysis = useMemo(() => analyzeText(text), [text]);
   const maxCount = analysis.topWords[0]?.count || 1;
   const initialSignature = useMemo(() => getWordCountSignature(analyzeText(sampleText).wordCounts), []);
@@ -305,6 +405,19 @@ export default function App() {
     }
     setUserWords([]);
     lastStoredSignatureRef.current = getWordCountSignature(analysis.wordCounts);
+  };
+
+  const copyDictionaryDraft = async () => {
+    if (!analysis.autoDictionaryDraft.entries.length) return;
+
+    try {
+      await navigator.clipboard.writeText(analysis.autoDictionaryDraft.json);
+      setDictionaryCopyStatus('已複製');
+    } catch {
+      setDictionaryCopyStatus('複製失敗');
+    }
+
+    window.setTimeout(() => setDictionaryCopyStatus(''), 1800);
   };
 
   useEffect(() => {

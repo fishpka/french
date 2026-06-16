@@ -681,6 +681,81 @@ textarea:focus {
   color: #746b5f;
 }
 
+.dictionary-builder {
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid rgba(68, 61, 51, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 252, 245, 0.72);
+}
+
+.dictionary-builder__heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.dictionary-builder__heading h3 {
+  margin: 0;
+  color: #20231f;
+  font-size: 1.05rem;
+}
+
+.dictionary-builder__heading button {
+  flex: 0 0 auto;
+}
+
+.dictionary-builder__meta,
+.dictionary-builder__words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dictionary-builder__meta {
+  margin-bottom: 12px;
+  color: #746b5f;
+  font-size: 0.78rem;
+  font-weight: 760;
+}
+
+.dictionary-builder__words {
+  margin-bottom: 12px;
+}
+
+.dictionary-builder__words span {
+  max-width: 100%;
+  overflow: hidden;
+  padding: 5px 7px;
+  border: 1px solid rgba(68, 61, 51, 0.14);
+  border-radius: 999px;
+  color: #33332d;
+  font-size: 0.78rem;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dictionary-builder__words small {
+  color: #746b5f;
+}
+
+.dictionary-builder__json {
+  max-height: 260px;
+  margin: 0;
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid rgba(68, 61, 51, 0.12);
+  border-radius: 8px;
+  background: #20231f;
+  color: #fff8ed;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
 .patterns {
   margin-top: 16px;
 }
@@ -1436,6 +1511,48 @@ textarea:focus {
 
 .cefr-words small {
   color: var(--ink-muted);
+}
+
+.dictionary-builder {
+  margin-top: 26px;
+  padding: 18px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+}
+
+.dictionary-builder__heading h3 {
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 1.12rem;
+  font-weight: 500;
+}
+
+.dictionary-builder__meta {
+  color: var(--ink-muted);
+  font-family: var(--display);
+  font-weight: 500;
+}
+
+.dictionary-builder__words span {
+  border-color: var(--line);
+  border-radius: 0;
+  color: var(--ink);
+  font-family: var(--display);
+  font-weight: 500;
+}
+
+.dictionary-builder__words small {
+  color: var(--ink-muted);
+}
+
+.dictionary-builder__json {
+  border-color: var(--line);
+  border-radius: 0;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .patterns {

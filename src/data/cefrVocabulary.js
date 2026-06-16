@@ -1,4 +1,6 @@
-const cefrVocabulary = {
+import { cefrVocabulary as mot2Vocabulary } from '../../public/mot2.js';
+
+const baseCefrVocabulary = {
   aller: 'A1',
   amour: 'A1',
   appeler: 'A1',
@@ -235,6 +237,11 @@ const cefrVocabulary = {
   métaphysique: 'C2',
   phénoménologie: 'C2',
   téléologie: 'C2',
+};
+
+const cefrVocabulary = {
+  ...baseCefrVocabulary,
+  ...mot2Vocabulary,
 };
 
 export default cefrVocabulary;
