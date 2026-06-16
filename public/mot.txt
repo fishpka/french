@@ -1,0 +1,66 @@
+être:
+suis, es, est, sommes, êtes, sont, étais, était, étions, étiez, étaient, été → être
+
+
+avoir:
+ai, as, a, avons, avez, ont, avais, avait, avions, aviez, avaient, eu → avoir
+
+
+aller:
+vais, vas, va, allons, allez, vont, allais, allait, allions, alliez, allaient, allé, allée, allés, allées → aller
+
+
+faire:
+fais, fait, faisons, faites, font, faisais, faisait, faisions, faisiez, faisaient, fait, faite, faits, faites → faire
+
+
+dire:
+dis, dit, disons, dites, disent, disait, disaient, dit, dite, dits, dites → dire
+
+
+pouvoir:
+peux, peut, pouvons, pouvez, peuvent, pouvais, pouvait, pouvaient, pu → pouvoir
+
+
+vouloir:
+veux, veut, voulons, voulez, veulent, voulais, voulait, voulaient, voulu → vouloir
+
+
+devoir:
+dois, doit, devons, devez, doivent, devais, devait, devaient, dû, due, dus, dues → devoir
+
+
+prendre:
+prends, prend, prenons, prenez, prennent, prenais, prenait, prenaient, pris, prise, prises → prendre
+
+
+venir:
+viens, vient, venons, venez, viennent, venais, venait, venaient, venu, venue, venus, venues → venir
+
+
+voir:
+vois, voit, voyons, voyez, voient, voyais, voyait, voyaient, vu, vue, vus, vues → voir
+
+
+savoir:
+sais, sait, savons, savez, savent, savais, savait, savaient, su → savoir
+
+
+mettre:
+mets, met, mettons, mettez, mettent, mettais, mettait, mettaient, mis, mise, mises → mettre
+
+
+parvenir:
+parviens, parvient, parvenons, parvenez, parviennent, parvenait, parvenaient, parvenu, parvenue → parvenir
+
+
+signer:
+signe, signes, signons, signez, signent, signé, signée, signés, signées → signer
+
+
+déclarer:
+déclare, déclares, déclarons, déclarez, déclarent, déclaré, déclarée, déclarés, déclarées → déclarer
+
+
+affirmer:
+affirme, affirmes, affirmons, affirmez, affirment, affirmé, affirmée, affirmés, affirmées → affirmer

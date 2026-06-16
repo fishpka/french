@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Copy, RefreshCcw, Trash2 } from 'lucide-react';
 import Navbar from './components/Navbar.jsx';
 import cefrVocabulary from './data/cefrVocabulary.js';
+import frenchLemmaMap from './data/frenchLemmaMap.js';
 
 const links = [
   { label: '分析器', href: '#analyzer' },
@@ -49,34 +50,16 @@ const patternRules = [
 
 const cefrLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'Unknown'];
 
-const verbFormMap = {
-  suis: 'être',
-  es: 'être',
-  est: 'être',
-  sommes: 'être',
-  êtes: 'être',
-  sont: 'être',
-  ai: 'avoir',
-  as: 'avoir',
-  a: 'avoir',
-  avons: 'avoir',
-  avez: 'avoir',
-  ont: 'avoir',
-  vais: 'aller',
-  vas: 'aller',
-  va: 'aller',
-  allons: 'aller',
-  allez: 'aller',
-  vont: 'aller',
-  fais: 'faire',
-  fait: 'faire',
-  faisons: 'faire',
-  faites: 'faire',
-  font: 'faire',
-};
-
 function normalizeWord(word) {
   return word.toLowerCase().replace(/[’]/g, "'").replace(/^['-]+|['-]+$/g, '');
+}
+
+function getLemmaFromMapping(word) {
+  return frenchLemmaMap[word] || null;
+}
+
+function isKnownLemma(word) {
+  return Boolean(getLemmaFromMapping(word) || cefrVocabulary[word]);
 }
 
 function normalizeFrenchWord(word) {
@@ -84,7 +67,20 @@ function normalizeFrenchWord(word) {
     .replace(/^[^a-zàâäçéèêëîïôöùûüÿñæœ]+|[^a-zàâäçéèêëîïôöùûüÿñæœ]+$/gi, '')
     .replace(/^(?:l|d|j|m|t|s|n|c|qu)'/i, '');
 
-  if (verbFormMap[normalized]) return verbFormMap[normalized];
+  const mappedLemma = getLemmaFromMapping(normalized);
+  if (mappedLemma) return mappedLemma;
+
+  if (cefrVocabulary[normalized]) return normalized;
+
+  const candidates = [];
+
+  if (
+    normalized.length > 4
+    && normalized.endsWith('es')
+    && !normalized.endsWith('ées')
+  ) {
+    candidates.push(normalized.slice(0, -2));
+  }
 
   if (
     normalized.length > 4
@@ -92,10 +88,21 @@ function normalizeFrenchWord(word) {
     && !normalized.endsWith('ss')
     && !normalized.endsWith('us')
   ) {
-    normalized = normalized.slice(0, -1);
+    candidates.push(normalized.slice(0, -1));
   }
 
-  return verbFormMap[normalized] || normalized;
+  if (normalized.length > 4 && normalized.endsWith('x')) {
+    candidates.push(normalized.slice(0, -1));
+  }
+
+  if (normalized.length > 5 && normalized.endsWith('e')) {
+    candidates.push(normalized.slice(0, -1));
+  }
+
+  const knownCandidate = candidates.find(isKnownLemma);
+  if (knownCandidate) return getLemmaFromMapping(knownCandidate) || knownCandidate;
+
+  return normalized;
 }
 
 function tokenize(text) {
@@ -198,7 +205,6 @@ function getSentenceStarts(text) {
 
 function getCefrAnalysis(wordCounts) {
   const totalOccurrences = wordCounts.reduce((sum, item) => sum + item.count, 0);
-  const debugRows = [];
   const levelMap = new Map(cefrLevels.map((level) => [level, {
     level,
     uniqueWords: 0,
@@ -212,21 +218,13 @@ function getCefrAnalysis(wordCounts) {
     const originalLevel = cefrVocabulary[word];
     const normalizedLevel = cefrVocabulary[normalizedWord];
     const level = originalLevel || normalizedLevel || 'Unknown';
-    const matchSource = originalLevel ? 'original' : normalizedLevel ? 'normalized' : 'unknown';
     const record = levelMap.get(level);
     record.uniqueWords += 1;
     record.totalCount += count;
     record.topWords.push({ word, normalizedWord, count });
-    debugRows.push({
-      originalWord: word,
-      normalizedWord,
-      level,
-      matchSource,
-      count,
-    });
   });
 
-  const summary = cefrLevels.map((level) => {
+  return cefrLevels.map((level) => {
     const record = levelMap.get(level);
     return {
       ...record,
@@ -236,8 +234,6 @@ function getCefrAnalysis(wordCounts) {
         .slice(0, 5),
     };
   });
-
-  return { summary, debugRows };
 }
 
 function analyzeText(text) {
@@ -248,7 +244,7 @@ function analyzeText(text) {
   const allWordCounts = countItems(words);
   const repeatedPhrases = getNgrams(words);
   const sentenceStarts = getSentenceStarts(text);
-  const { summary: cefrAnalysis, debugRows: cefrDebugRows } = getCefrAnalysis(wordCounts);
+  const cefrAnalysis = getCefrAnalysis(wordCounts);
   const patternMatches = patternRules.map((rule) => {
     const matches = [...text.matchAll(rule.regex)].map((match) => match[0].toLowerCase());
     return {
@@ -265,7 +261,6 @@ function analyzeText(text) {
     topWords,
     allWordCounts,
     cefrAnalysis,
-    cefrDebugRows,
     repeatedPhrases,
     sentenceStarts,
     patternMatches,
@@ -507,34 +502,6 @@ export default function App() {
               </article>
             ))}
           </div>
-          {import.meta.env.DEV && (
-            <div className="cefr-debug">
-              <div className="cefr-debug__heading">
-                <p className="eyebrow">Debug</p>
-                <h3>CEFR match details</h3>
-              </div>
-              {analysis.cefrDebugRows.length ? (
-                <div className="cefr-debug__table" role="table" aria-label="CEFR debug match details">
-                  <div className="cefr-debug__row cefr-debug__row--header" role="row">
-                    <span role="columnheader">original word</span>
-                    <span role="columnheader">normalized word</span>
-                    <span role="columnheader">CEFR level</span>
-                    <span role="columnheader">match source</span>
-                  </div>
-                  {analysis.cefrDebugRows.map((row) => (
-                    <div className="cefr-debug__row" role="row" key={`${row.originalWord}-${row.normalizedWord}`}>
-                      <span role="cell">{row.originalWord}</span>
-                      <span role="cell">{row.normalizedWord}</span>
-                      <strong role="cell">{row.level}</strong>
-                      <em role="cell" data-source={row.matchSource}>{row.matchSource}</em>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="empty-state">No CEFR debug rows.</p>
-              )}
-            </div>
-          )}
         </section>
 
         <section className="patterns" id="patterns" data-reveal>

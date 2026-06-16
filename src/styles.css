@@ -681,74 +681,6 @@ textarea:focus {
   color: #746b5f;
 }
 
-.cefr-debug {
-  margin-top: 18px;
-  padding: 16px;
-  border: 1px dashed rgba(68, 61, 51, 0.24);
-  border-radius: 8px;
-  background: rgba(255, 252, 245, 0.7);
-}
-
-.cefr-debug__heading {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.cefr-debug__heading h3 {
-  margin: 0;
-  color: #20231f;
-  font-size: 1rem;
-}
-
-.cefr-debug__table {
-  display: grid;
-  overflow-x: auto;
-}
-
-.cefr-debug__row {
-  display: grid;
-  grid-template-columns: minmax(120px, 1fr) minmax(120px, 1fr) 92px 120px;
-  gap: 10px;
-  min-width: 560px;
-  padding: 9px 0;
-  border-top: 1px solid rgba(68, 61, 51, 0.12);
-}
-
-.cefr-debug__row span,
-.cefr-debug__row strong,
-.cefr-debug__row em {
-  min-width: 0;
-  overflow: hidden;
-  color: #33332d;
-  font-size: 0.82rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.cefr-debug__row strong {
-  color: #c7563f;
-}
-
-.cefr-debug__row em {
-  color: #746b5f;
-  font-style: normal;
-  font-weight: 760;
-}
-
-.cefr-debug__row em[data-source="unknown"] {
-  color: #c7563f;
-}
-
-.cefr-debug__row--header span {
-  color: #746b5f;
-  font-size: 0.7rem;
-  font-weight: 850;
-  text-transform: uppercase;
-}
-
 .patterns {
   margin-top: 16px;
 }
@@ -1504,51 +1436,6 @@ textarea:focus {
 
 .cefr-words small {
   color: var(--ink-muted);
-}
-
-.cefr-debug {
-  margin-top: 26px;
-  padding: 18px 0 0;
-  border: 0;
-  border-top: 1px dashed var(--line);
-  border-radius: 0;
-  background: transparent;
-}
-
-.cefr-debug__heading h3 {
-  color: var(--ink);
-  font-family: var(--display);
-  font-size: 1.08rem;
-  font-weight: 500;
-  letter-spacing: -0.03em;
-}
-
-.cefr-debug__row {
-  border-color: var(--line);
-}
-
-.cefr-debug__row span,
-.cefr-debug__row strong,
-.cefr-debug__row em {
-  color: var(--ink);
-  font-family: var(--display);
-  font-weight: 500;
-}
-
-.cefr-debug__row strong,
-.cefr-debug__row em[data-source="unknown"] {
-  color: var(--accent);
-}
-
-.cefr-debug__row em {
-  color: var(--ink-muted);
-}
-
-.cefr-debug__row--header span {
-  color: var(--ink-muted);
-  font-family: var(--display);
-  font-weight: 650;
-  letter-spacing: 0.12em;
 }
 
 .patterns {
