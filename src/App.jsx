@@ -374,6 +374,8 @@ export default function App() {
   const [dictionaryCopyStatus, setDictionaryCopyStatus] = useState('');
   const analysis = useMemo(() => analyzeText(text), [text]);
   const maxCount = analysis.topWords[0]?.count || 1;
+  const cloudWords = analysis.topWords.slice(0, 24);
+  const cloudAnimationKey = useMemo(() => getWordCountSignature(cloudWords), [cloudWords]);
   const initialSignature = useMemo(() => getWordCountSignature(analyzeText(sampleText).wordCounts), []);
   const lastStoredSignatureRef = useRef(initialSignature);
   const topUserWords = userWords.slice(0, 10);
@@ -560,15 +562,22 @@ export default function App() {
             </div>
           </section>
 
-          <section className="cloud-panel">
-            <p className="eyebrow">Word cloud</p>
-            <div className="word-cloud">
-              {analysis.topWords.map((item, index) => (
+          <section className="cloud-panel" aria-labelledby="word-cloud-title">
+            <div className="cloud-panel__heading">
+              <div>
+                <p className="eyebrow">Word cloud</p>
+                <h2 id="word-cloud-title">文字雲</h2>
+              </div>
+            </div>
+            <div className="word-cloud" key={cloudAnimationKey}>
+              {cloudWords.map((item, index) => (
                 <span
                   key={item.word}
+                  aria-label={`${item.word}, ${item.count} 次`}
                   style={{
                     '--size': `${0.86 + (item.count / maxCount) * 1.7}rem`,
                     '--tone': index % 5,
+                    '--index': index,
                   }}
                 >
                   {item.word}
