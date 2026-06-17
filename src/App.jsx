@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Copy, RefreshCcw, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Copy, RefreshCcw } from 'lucide-react';
 import AuthPanel from './components/AuthPanel.jsx';
 import HistoryDashboard from './components/HistoryDashboard.jsx';
 import MonthlyComparison from './components/MonthlyComparison.jsx';
@@ -19,9 +19,6 @@ const links = [
   { label: '月比較', href: '#monthly-comparison' },
   { label: '摘要', href: '#summary' },
 ];
-
-const userWordStorageKey = 'french:user-word-frequency';
-const userWordStorageLimit = 300;
 
 const sampleText = `Aujourd'hui, les réseaux sociaux occupent une place importante dans notre vie quotidienne. Je pense que cette évolution peut être positive, car elle permet aux personnes de communiquer plus rapidement et de partager des informations.
 
@@ -133,62 +130,6 @@ function countItems(items) {
   const map = new Map();
   items.forEach((item) => map.set(item, (map.get(item) || 0) + 1));
   return [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-}
-
-function readUserWordFrequency() {
-  if (typeof window === 'undefined') return [];
-
-  try {
-    const value = window.localStorage.getItem(userWordStorageKey);
-    if (!value) return [];
-
-    const records = JSON.parse(value);
-    if (!Array.isArray(records)) return [];
-
-    return records
-      .filter((record) => (
-        record
-        && typeof record.word === 'string'
-        && Number.isFinite(record.count)
-        && typeof record.lastAnalyzedAt === 'string'
-      ))
-      .map((record) => ({
-        word: record.word,
-        count: record.count,
-        lastAnalyzedAt: record.lastAnalyzedAt,
-      }));
-  } catch {
-    return [];
-  }
-}
-
-function saveUserWordFrequency(records) {
-  if (typeof window === 'undefined') return;
-
-  try {
-    window.localStorage.setItem(userWordStorageKey, JSON.stringify(records));
-  } catch {
-    // localStorage can be unavailable in restrictive browser modes.
-  }
-}
-
-function mergeUserWordFrequency(records, wordCounts, analyzedAt) {
-  const map = new Map(records.map((record) => [record.word, record]));
-
-  wordCounts.forEach(({ word, count }) => {
-    if (!word || !Number.isFinite(count) || count <= 0) return;
-
-    const previous = map.get(word);
-    map.set(word, {
-      word,
-      count: (previous?.count || 0) + count,
-      lastAnalyzedAt: analyzedAt,
-    });
-  });
-
-  return [...map.values()]
-    .sort((a, b) => b.count - a.count || a.word.localeCompare(b.word))
-    .slice(0, userWordStorageLimit);
 }
 
 function getWordCountSignature(wordCounts) {
@@ -383,7 +324,6 @@ function analyzeText(text) {
 
 export default function App() {
   const [text, setText] = useState(sampleText);
-  const [userWords, setUserWords] = useState(() => readUserWordFrequency());
   const [session, setSession] = useState(null);
   const [history, setHistory] = useState([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
@@ -416,9 +356,6 @@ export default function App() {
   const maxCount = analysis.topWords[0]?.count || 1;
   const cloudWords = analysis.topWords.slice(0, 24);
   const cloudAnimationKey = useMemo(() => getWordCountSignature(cloudWords), [cloudWords]);
-  const initialSignature = useMemo(() => getWordCountSignature(analyzeText(sampleText).wordCounts), []);
-  const lastStoredSignatureRef = useRef(initialSignature);
-  const topUserWords = userWords.slice(0, 10);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return undefined;
@@ -459,35 +396,6 @@ export default function App() {
       isActive = false;
     };
   }, [session?.user?.id, historyRefreshIndex]);
-
-  useEffect(() => {
-    const signature = getWordCountSignature(analysis.wordCounts);
-    if (!signature || signature === lastStoredSignatureRef.current) return undefined;
-
-    const timer = window.setTimeout(() => {
-      const analyzedAt = new Date().toISOString();
-      setUserWords((currentWords) => {
-        const merged = mergeUserWordFrequency(currentWords, analysis.wordCounts, analyzedAt);
-        saveUserWordFrequency(merged);
-        return merged;
-      });
-      lastStoredSignatureRef.current = signature;
-    }, 900);
-
-    return () => window.clearTimeout(timer);
-  }, [analysis.wordCounts]);
-
-  const clearUserWords = () => {
-    if (typeof window !== 'undefined') {
-      try {
-        window.localStorage.removeItem(userWordStorageKey);
-      } catch {
-        // localStorage can be unavailable in restrictive browser modes.
-      }
-    }
-    setUserWords([]);
-    lastStoredSignatureRef.current = getWordCountSignature(analysis.wordCounts);
-  };
 
   const copyDictionaryDraft = async () => {
     if (!analysis.autoDictionaryDraft.entries.length) return;
@@ -597,34 +505,6 @@ export default function App() {
 
           <aside className="summary-panel" id="summary">
             <AuthPanel session={session} />
-            <section className="user-words" aria-labelledby="user-words-title">
-              <div className="user-words__heading">
-                <div>
-                  <p className="eyebrow">Browser history</p>
-                  <h2 id="user-words-title">你最常使用的詞語</h2>
-                </div>
-                <button type="button" onClick={clearUserWords} disabled={!userWords.length}>
-                  <Trash2 size={15} />
-                  清除我的紀錄
-                </button>
-              </div>
-              <p className="user-words__privacy">
-                這份快速紀錄只存在你的瀏覽器；登入後可手動儲存分析結果到 Supabase。
-              </p>
-              {topUserWords.length ? (
-                <div className="user-word-list">
-                  {topUserWords.map((item, index) => (
-                    <div className="user-word-row" key={item.word}>
-                      <span>{index + 1}</span>
-                      <strong>{item.word}</strong>
-                      <small>{item.count}</small>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="empty-state">分析自己的法文文本後，這裡會顯示前 10 個常用詞。</p>
-              )}
-            </section>
           </aside>
         </section>
 
