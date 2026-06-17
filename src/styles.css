@@ -1518,7 +1518,8 @@ textarea:focus {
   font-weight: 500;
 }
 
-.auth-panel {
+.auth-panel,
+.export-panel {
   display: grid;
   gap: 14px;
   padding-bottom: 20px;
@@ -1526,13 +1527,15 @@ textarea:focus {
 }
 
 .auth-panel h2,
+.export-panel h2,
 .history-card strong,
 .monthly-table strong {
   margin: 0;
   color: var(--ink);
 }
 
-.auth-panel p {
+.auth-panel p,
+.export-panel p {
   margin: 0;
   color: var(--ink-muted);
   line-height: 1.65;
@@ -1564,6 +1567,7 @@ textarea:focus {
 }
 
 .auth-panel button,
+.export-panel button,
 .save-analysis button,
 .history-card__heading button {
   display: inline-flex;
@@ -1587,6 +1591,8 @@ textarea:focus {
 
 .auth-panel button:hover,
 .auth-panel button:focus-visible,
+.export-panel button:hover,
+.export-panel button:focus-visible,
 .save-analysis button:hover,
 .save-analysis button:focus-visible {
   border-color: var(--accent);
@@ -1595,16 +1601,33 @@ textarea:focus {
 }
 
 .auth-panel button:disabled,
+.export-panel button:disabled,
 .save-analysis button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
 
 .auth-panel small,
+.export-panel small,
 .save-analysis small {
   color: var(--accent);
   font-size: 0.78rem;
   line-height: 1.5;
+}
+
+.export-panel {
+  margin-top: 20px;
+}
+
+.export-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.export-panel__actions button {
+  min-width: 96px;
+  padding: 0 14px;
 }
 
 .save-analysis {
@@ -1677,7 +1700,7 @@ textarea:focus {
 
 .history-stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin: 0 0 14px;
 }

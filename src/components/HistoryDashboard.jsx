@@ -53,6 +53,10 @@ export default function HistoryDashboard({ history, isLoading, onChanged }) {
                   <dt>句數</dt>
                   <dd>{item.sentence_count}</dd>
                 </div>
+                <div>
+                  <dt>Unknown</dt>
+                  <dd>{(item.word_frequencies || []).filter((word) => word.cefr_level === 'Unknown').length}</dd>
+                </div>
               </dl>
               <div className="history-cefr">
                 {(item.cefr_summary || []).map((level) => (

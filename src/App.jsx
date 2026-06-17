@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Copy, RefreshCcw } from 'lucide-react';
 import AuthPanel from './components/AuthPanel.jsx';
+import ExportDataPanel from './components/ExportDataPanel.jsx';
 import HistoryDashboard from './components/HistoryDashboard.jsx';
 import MonthlyComparison from './components/MonthlyComparison.jsx';
 import Navbar from './components/Navbar.jsx';
@@ -505,6 +506,7 @@ export default function App() {
 
           <aside className="summary-panel" id="summary">
             <AuthPanel session={session} />
+            <ExportDataPanel session={session} />
           </aside>
         </section>
 

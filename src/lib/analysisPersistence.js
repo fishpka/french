@@ -76,6 +76,34 @@ export async function getAnalysisHistory() {
   return data || [];
 }
 
+export async function getAnalysisExportData() {
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from('analysis_sessions')
+    .select(`
+      id,
+      created_at,
+      total_words,
+      content_words,
+      unique_words,
+      sentence_count,
+      cefr_summary,
+      top_words,
+      word_frequencies (
+        id,
+        word,
+        normalized_word,
+        count,
+        cefr_level
+      )
+    `)
+    .order('created_at', { ascending: true })
+    .limit(1000);
+
+  if (error) throw error;
+  return data || [];
+}
+
 export async function deleteAnalysisSession(sessionId) {
   const client = requireSupabase();
   const { error } = await client
