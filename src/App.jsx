@@ -1,14 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Copy, RefreshCcw, Trash2 } from 'lucide-react';
+import AuthPanel from './components/AuthPanel.jsx';
+import HistoryDashboard from './components/HistoryDashboard.jsx';
+import MonthlyComparison from './components/MonthlyComparison.jsx';
 import Navbar from './components/Navbar.jsx';
+import SaveAnalysisButton from './components/SaveAnalysisButton.jsx';
 import cefrVocabulary from './data/cefrVocabulary.js';
 import frenchLemmaMap from './data/frenchLemmaMap.js';
+import { getAnalysisHistory } from './lib/analysisPersistence.js';
+import { isSupabaseConfigured, supabase } from './lib/supabaseClient.js';
 
 const links = [
   { label: '分析器', href: '#analyzer' },
   { label: '圖表', href: '#charts' },
   { label: 'CEFR', href: '#cefr' },
   { label: '句型', href: '#patterns' },
+  { label: '歷史', href: '#history' },
+  { label: '月比較', href: '#monthly-comparison' },
   { label: '摘要', href: '#summary' },
 ];
 
@@ -247,6 +255,11 @@ function getCefrAnalysis(wordCounts) {
   });
 }
 
+function getCefrLevelForWord(word) {
+  const normalizedWord = normalizeFrenchWord(word);
+  return cefrVocabulary[word] || cefrVocabulary[normalizedWord] || 'Unknown';
+}
+
 function isSentenceStart(text, index) {
   const before = text.slice(0, index).trimEnd();
   return !before || /[.!?。！？\n]$/.test(before);
@@ -371,14 +384,81 @@ function analyzeText(text) {
 export default function App() {
   const [text, setText] = useState(sampleText);
   const [userWords, setUserWords] = useState(() => readUserWordFrequency());
+  const [session, setSession] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [historyRefreshIndex, setHistoryRefreshIndex] = useState(0);
   const [dictionaryCopyStatus, setDictionaryCopyStatus] = useState('');
   const analysis = useMemo(() => analyzeText(text), [text]);
+  const analysisSnapshot = useMemo(() => ({
+    totalWords: analysis.words.length,
+    contentWords: analysis.contentWords.length,
+    uniqueWords: analysis.uniqueCount,
+    sentenceCount: analysis.sentenceCount,
+    cefrSummary: analysis.cefrAnalysis.map((level) => ({
+      level: level.level,
+      uniqueWords: level.uniqueWords,
+      totalCount: level.totalCount,
+      percentage: level.percentage,
+    })),
+    topWords: analysis.topWords.slice(0, 12).map(({ word, count }) => ({
+      word,
+      count,
+      cefrLevel: getCefrLevelForWord(word),
+    })),
+    wordFrequencies: analysis.wordCounts.map(({ word, count }) => ({
+      word,
+      normalizedWord: normalizeFrenchWord(word),
+      count,
+      cefrLevel: getCefrLevelForWord(word),
+    })),
+  }), [analysis]);
   const maxCount = analysis.topWords[0]?.count || 1;
   const cloudWords = analysis.topWords.slice(0, 24);
   const cloudAnimationKey = useMemo(() => getWordCountSignature(cloudWords), [cloudWords]);
   const initialSignature = useMemo(() => getWordCountSignature(analyzeText(sampleText).wordCounts), []);
   const lastStoredSignatureRef = useRef(initialSignature);
   const topUserWords = userWords.slice(0, 10);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase) return undefined;
+
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+    });
+
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setHistoryRefreshIndex((index) => index + 1);
+    });
+
+    return () => subscription.subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!session?.user?.id) {
+      setHistory([]);
+      return;
+    }
+
+    let isActive = true;
+    setIsHistoryLoading(true);
+
+    getAnalysisHistory()
+      .then((records) => {
+        if (isActive) setHistory(records);
+      })
+      .catch(() => {
+        if (isActive) setHistory([]);
+      })
+      .finally(() => {
+        if (isActive) setIsHistoryLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [session?.user?.id, historyRefreshIndex]);
 
   useEffect(() => {
     const signature = getWordCountSignature(analysis.wordCounts);
@@ -507,13 +587,20 @@ export default function App() {
               spellCheck="false"
               placeholder="貼上你的法文文章、作文或口說稿..."
             />
+            <SaveAnalysisButton
+              disabled={!session?.user?.id || !analysis.wordCounts.length}
+              session={session}
+              snapshot={analysisSnapshot}
+              onSaved={() => setHistoryRefreshIndex((index) => index + 1)}
+            />
           </div>
 
           <aside className="summary-panel" id="summary">
+            <AuthPanel session={session} />
             <section className="user-words" aria-labelledby="user-words-title">
               <div className="user-words__heading">
                 <div>
-                  <p className="eyebrow">Local history</p>
+                  <p className="eyebrow">Browser history</p>
                   <h2 id="user-words-title">你最常使用的詞語</h2>
                 </div>
                 <button type="button" onClick={clearUserWords} disabled={!userWords.length}>
@@ -522,7 +609,7 @@ export default function App() {
                 </button>
               </div>
               <p className="user-words__privacy">
-                資料只會儲存在你的瀏覽器中，不會上傳到伺服器。
+                這份快速紀錄只存在你的瀏覽器；登入後可手動儲存分析結果到 Supabase。
               </p>
               {topUserWords.length ? (
                 <div className="user-word-list">
@@ -676,6 +763,14 @@ export default function App() {
             </article>
           </div>
         </section>
+
+        <HistoryDashboard
+          history={history}
+          isLoading={isHistoryLoading}
+          onChanged={() => setHistoryRefreshIndex((index) => index + 1)}
+        />
+
+        <MonthlyComparison history={history} />
       </main>
     </>
   );
