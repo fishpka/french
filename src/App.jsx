@@ -653,6 +653,11 @@ export default function App() {
         />
 
         <MonthlyComparison history={history} />
+
+        <footer className="site-footer">
+          <span>聯絡信箱</span>
+          <a href="mailto:fishpka@hotmail.com">fishpka@hotmail.com</a>
+        </footer>
       </main>
     </>
   );

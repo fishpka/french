@@ -218,6 +218,30 @@ a {
   padding: 58px 0 76px;
 }
 
+.site-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 54px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(68, 61, 51, 0.16);
+  color: #6f665b;
+  font-size: 0.94rem;
+}
+
+.site-footer a {
+  color: #2f6b5f;
+  font-weight: 800;
+}
+
+.site-footer a:hover,
+.site-footer a:focus-visible {
+  color: #20231f;
+  text-decoration: underline;
+  outline: none;
+}
+
 .intro {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(360px, 0.72fr);
