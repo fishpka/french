@@ -1,5 +1,9 @@
 import { Trash2 } from 'lucide-react';
+import { useEffect } from 'react';
 import { deleteAnalysisSession } from '../lib/analysisPersistence.js';
+import { trackEvent } from '../lib/analytics.js';
+
+let hasTrackedHistoryView = false;
 
 function formatDate(value) {
   return new Intl.DateTimeFormat('zh-TW', {
@@ -12,6 +16,12 @@ function formatDate(value) {
 }
 
 export default function HistoryDashboard({ history, isLoading, onChanged }) {
+  useEffect(() => {
+    if (hasTrackedHistoryView) return;
+    hasTrackedHistoryView = true;
+    trackEvent('history_view');
+  }, []);
+
   const removeSession = async (sessionId) => {
     await deleteAnalysisSession(sessionId);
     onChanged?.();

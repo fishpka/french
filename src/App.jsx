@@ -9,6 +9,7 @@ import SaveAnalysisButton from './components/SaveAnalysisButton.jsx';
 import cefrVocabulary from './data/cefrVocabulary.js';
 import frenchLemmaMap from './data/frenchLemmaMap.js';
 import { getAnalysisHistory } from './lib/analysisPersistence.js';
+import { trackEvent } from './lib/analytics.js';
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient.js';
 
 const links = [
@@ -483,6 +484,9 @@ export default function App() {
                 <h2>文章文本</h2>
               </div>
               <div className="button-row">
+                <button type="button" onClick={() => trackEvent('analyze_click')}>
+                  分析
+                </button>
                 <button type="button" onClick={() => setText(sampleText)}>
                   <Copy size={16} />
                   範例

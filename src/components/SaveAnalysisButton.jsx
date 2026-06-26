@@ -1,6 +1,7 @@
 import { Save } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { saveAnalysisSession } from '../lib/analysisPersistence.js';
+import { trackEvent } from '../lib/analytics.js';
 
 export default function SaveAnalysisButton({ disabled, session, snapshot, onRequireAuth, onSaved }) {
   const [status, setStatus] = useState('');
@@ -14,7 +15,7 @@ export default function SaveAnalysisButton({ disabled, session, snapshot, onRequ
     setStatus('');
 
     try {
-      await saveAnalysisSession(session.user.id, snapshot);
+      await saveAnalysisSession(userId, snapshot);
       setStatus('已儲存分析結果。');
       onSaved?.();
     } catch (error) {
@@ -26,6 +27,8 @@ export default function SaveAnalysisButton({ disabled, session, snapshot, onRequ
 
   const saveAnalysis = async () => {
     if (!snapshot) return;
+
+    trackEvent('save_analysis_click');
 
     if (!session?.user?.id) {
       setShouldSaveAfterAuth(true);

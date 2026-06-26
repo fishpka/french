@@ -1,5 +1,6 @@
 import { LogIn, LogOut, Mail } from 'lucide-react';
 import { useState } from 'react';
+import { trackEvent } from '../lib/analytics.js';
 import { isSupabaseConfigured, supabase } from '../lib/supabaseClient.js';
 
 export default function AuthPanel({ session }) {
@@ -16,6 +17,10 @@ export default function AuthPanel({ session }) {
 
     setIsLoading(true);
     setStatus('');
+
+    if (mode === 'sign-in') {
+      trackEvent('login_click');
+    }
 
     const { error } = mode === 'sign-up'
       ? await supabase.auth.signUp({ email, password })

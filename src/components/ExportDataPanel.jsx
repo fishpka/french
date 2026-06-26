@@ -1,6 +1,7 @@
 import { Download } from 'lucide-react';
 import { useState } from 'react';
 import { getAnalysisExportData } from '../lib/analysisPersistence.js';
+import { trackEvent } from '../lib/analytics.js';
 
 function getExportDate() {
   return new Date().toISOString().slice(0, 10);
@@ -97,6 +98,10 @@ export default function ExportDataPanel({ session }) {
 
   const exportData = async (format) => {
     if (!session?.user?.id) return;
+
+    if (format === 'csv') {
+      trackEvent('export_csv_click');
+    }
 
     setIsExporting(true);
     setStatus('');
