@@ -52,7 +52,6 @@ export default function SaveAnalysisButton({ disabled, session, snapshot, onRequ
         <Save size={16} />
         {isSaving ? 'Saving' : 'Save My Progress'}
       </button>
-      <p>原文只在瀏覽器中分析；雲端只保存詞語、詞頻、CEFR 與統計。</p>
       {status ? <small>{status}</small> : null}
     </div>
   );
