@@ -10,18 +10,21 @@ export default function AuthPanel({ session }) {
 
   const userEmail = session?.user?.email;
 
-  const signIn = async (event) => {
+  const authenticate = async (event, mode) => {
     event.preventDefault();
     if (!supabase || !email || !password) return;
 
     setIsLoading(true);
     setStatus('');
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = mode === 'sign-up'
+      ? await supabase.auth.signUp({ email, password })
+      : await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      const { error: signUpError } = await supabase.auth.signUp({ email, password });
-      setStatus(signUpError ? signUpError.message : '註冊完成。若 Supabase 要求驗證信箱，請先完成驗證。');
+      setStatus(error.message);
+    } else if (mode === 'sign-up') {
+      setStatus('註冊完成。若 Supabase 要求驗證信箱，請先完成驗證。');
     } else {
       setStatus('已登入。');
     }
@@ -72,7 +75,7 @@ export default function AuthPanel({ session }) {
         <p className="eyebrow">Account</p>
         <h2 id="auth-title">登入以追蹤進步</h2>
       </div>
-      <form onSubmit={signIn}>
+      <form onSubmit={(event) => authenticate(event, 'sign-in')}>
         <label>
           <Mail size={15} />
           <input
@@ -95,10 +98,15 @@ export default function AuthPanel({ session }) {
             required
           />
         </label>
-        <button type="submit" disabled={isLoading}>
-          <LogIn size={16} />
-          登入 / 註冊
-        </button>
+        <div className="auth-panel__actions">
+          <button type="submit" disabled={isLoading}>
+            <LogIn size={16} />
+            登入
+          </button>
+          <button type="button" onClick={(event) => authenticate(event, 'sign-up')} disabled={isLoading}>
+            註冊
+          </button>
+        </div>
       </form>
       <p>只儲存分析後的詞語、詞頻、CEFR 與統計數據，不儲存原文。</p>
       {status ? <small>{status}</small> : null}

@@ -330,6 +330,7 @@ export default function App() {
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [historyRefreshIndex, setHistoryRefreshIndex] = useState(0);
   const [dictionaryCopyStatus, setDictionaryCopyStatus] = useState('');
+  const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
   const analysis = useMemo(() => analyzeText(text), [text]);
   const analysisSnapshot = useMemo(() => ({
     totalWords: analysis.words.length,
@@ -378,6 +379,8 @@ export default function App() {
       setHistory([]);
       return;
     }
+
+    setIsAuthPromptOpen(false);
 
     let isActive = true;
     setIsHistoryLoading(true);
@@ -497,15 +500,16 @@ export default function App() {
               placeholder="貼上你的法文文章、作文或口說稿..."
             />
             <SaveAnalysisButton
-              disabled={!session?.user?.id || !analysis.wordCounts.length}
+              disabled={!analysis.wordCounts.length}
               session={session}
               snapshot={analysisSnapshot}
+              onRequireAuth={() => setIsAuthPromptOpen(true)}
               onSaved={() => setHistoryRefreshIndex((index) => index + 1)}
             />
           </div>
 
           <aside className="summary-panel" id="summary">
-            <AuthPanel session={session} />
+            {session?.user?.id ? <AuthPanel session={session} /> : null}
             <ExportDataPanel session={session} />
           </aside>
         </section>
@@ -659,6 +663,37 @@ export default function App() {
           <a href="mailto:fishpka@hotmail.com">fishpka@hotmail.com</a>
         </footer>
       </main>
+
+      {isAuthPromptOpen && !session?.user?.id ? (
+        <div className="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+          <div className="auth-modal__backdrop" onClick={() => setIsAuthPromptOpen(false)} />
+          <div className="auth-modal__panel">
+            <button
+              className="auth-modal__close"
+              type="button"
+              onClick={() => setIsAuthPromptOpen(false)}
+              aria-label="關閉登入視窗"
+            >
+              ×
+            </button>
+            <div className="auth-modal__intro">
+              <p className="eyebrow">Save progress</p>
+              <h2 id="auth-modal-title">登入後儲存進度</h2>
+              <p>分析可以免費使用；只有在儲存個人進度時才需要登入。</p>
+            </div>
+            <div className="auth-modal__promo">
+              <strong>🔒 登入後即可追蹤你的法文成長：</strong>
+              <ul>
+                <li>保存所有分析紀錄</li>
+                <li>比較每月進步趨勢</li>
+                <li>查看專屬 French Wrapped 年度報告</li>
+                <li>建立個人單字筆記本</li>
+              </ul>
+            </div>
+            <AuthPanel session={session} />
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
