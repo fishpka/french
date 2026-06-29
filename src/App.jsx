@@ -7,6 +7,7 @@ import MonthlyComparison from './components/MonthlyComparison.jsx';
 import Navbar from './components/Navbar.jsx';
 import SaveAnalysisButton from './components/SaveAnalysisButton.jsx';
 import cefrVocabulary from './data/cefrVocabulary.js';
+import frenchChineseGlosses from './data/frenchChineseGlosses.js';
 import frenchLemmaMap from './data/frenchLemmaMap.js';
 import { getAnalysisHistory } from './lib/analysisPersistence.js';
 import { trackEvent } from './lib/analytics.js';
@@ -58,8 +59,13 @@ const patternRules = [
 const cefrLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'Unknown'];
 const autoDictionaryDefaultLevel = 'B2';
 const autoDictionaryLimit = 20;
+const showActionRecommendations = false;
+const showUnknownReview = false;
+const showCefrExcludedNote = false;
+const showChineseGlosses = false;
 const frenchLetterClass = 'a-zàâäçéèêëîïôöùûüÿñæœ';
 const sentenceDelimiter = /[.!?。！？\n]+/;
+const advancedCefrLevels = new Set(['B2', 'C1', 'C2']);
 function createWordPattern() {
   return new RegExp(`[${frenchLetterClass}]+(?:[’'-][${frenchLetterClass}]+)*`, 'gi');
 }
@@ -218,6 +224,11 @@ function getCefrLevelForWord(word) {
   return cefrVocabulary[word] || cefrVocabulary[normalizedWord] || 'Unknown';
 }
 
+function getChineseGlossForWord(word) {
+  const normalizedWord = normalizeFrenchWord(word);
+  return frenchChineseGlosses[word] || frenchChineseGlosses[normalizedWord] || '';
+}
+
 function isSentenceStart(text, index) {
   const before = text.slice(0, index).trimEnd();
   return !before || /[.!?。！？\n]$/.test(before);
@@ -315,6 +326,217 @@ function getAutoDictionaryDraft(wordCounts, shapeStats) {
   };
 }
 
+function getExcludedReason(shapeStats) {
+  if (shapeStats?.hasDigit) return '含數字';
+  if (shapeStats?.hasAcronymShape) return '縮寫';
+  if (shapeStats?.hasCapitalizedNonSentenceStart && !shapeStats?.hasLowercaseStart) return '可能專有名詞';
+  return '非 CEFR 候選';
+}
+
+function getUnknownReview(wordCounts, cefrExcludedWordCounts, shapeStats, autoDictionaryDraft) {
+  const resolvedForms = wordCounts
+    .map(({ word, count }) => {
+      const normalizedWord = normalizeFrenchWord(word);
+      const cefrLevel = getCefrLevelForWord(word);
+      return {
+        word,
+        normalizedWord,
+        count,
+        cefrLevel,
+      };
+    })
+    .filter((item) => item.word !== item.normalizedWord && item.cefrLevel !== 'Unknown')
+    .sort((a, b) => b.count - a.count || a.word.localeCompare(b.word))
+    .slice(0, 8);
+
+  const excluded = cefrExcludedWordCounts
+    .map(({ word, count }) => ({
+      word,
+      count,
+      reason: getExcludedReason(shapeStats.get(word)),
+    }))
+    .sort((a, b) => b.count - a.count || a.word.localeCompare(b.word))
+    .slice(0, 10);
+
+  const pendingDictionary = autoDictionaryDraft.entries.slice(0, 10);
+  const totalPendingCount = autoDictionaryDraft.entries.length;
+
+  return {
+    resolvedForms,
+    excluded,
+    pendingDictionary,
+    totalPendingCount,
+    json: autoDictionaryDraft.json,
+  };
+}
+
+function getPatternCount(patternMatches, label) {
+  return patternMatches.find((pattern) => pattern.label === label)?.count || 0;
+}
+
+function getCefrTotal(cefrAnalysis, levels) {
+  return cefrAnalysis
+    .filter((level) => levels.has(level.level))
+    .reduce((sum, level) => sum + level.totalCount, 0);
+}
+
+function getActionRecommendations(analysis) {
+  const recommendations = [];
+  const totalWords = analysis.words.length;
+  const contentWordCount = analysis.contentWords.length;
+  const cefrTotal = analysis.cefrWordCounts.reduce((sum, item) => sum + item.count, 0);
+  const unknownCount = analysis.cefrAnalysis.find((level) => level.level === 'Unknown')?.totalCount || 0;
+  const unknownRatio = cefrTotal ? unknownCount / cefrTotal : 0;
+  const advancedCount = getCefrTotal(analysis.cefrAnalysis, advancedCefrLevels);
+  const advancedRatio = cefrTotal ? advancedCount / cefrTotal : 0;
+  const topWordTotal = analysis.topWords.slice(0, 3).reduce((sum, item) => sum + item.count, 0);
+  const topWordRatio = contentWordCount ? topWordTotal / contentWordCount : 0;
+  const hasText = totalWords > 0;
+
+  if (!hasText) {
+    return [{
+      id: 'start-with-text',
+      priority: 'Start',
+      title: '先貼上一段法文文本',
+      reason: '目前還沒有可分析的詞彙。',
+      action: '貼上作文、口說稿或新聞段落後，這裡會產生可執行的修改建議。',
+      examples: ['作文', '口說稿', '新聞文章'],
+    }];
+  }
+
+  if (totalWords < 120) {
+    recommendations.push({
+      id: 'short-text',
+      priority: 'High',
+      title: '文本偏短，先補足篇幅',
+      reason: `目前約 ${totalWords} 個詞，統計結果容易受少數詞影響。`,
+      action: '若這是作文練習，先擴寫到 150-250 詞，再判斷 CEFR 分布與重複句型會更穩定。',
+      examples: ['補一個具體例子', '補一段反方觀點', '補結論'],
+    });
+  }
+
+  if (unknownRatio >= 0.15) {
+    const unknownWords = analysis.cefrAnalysis
+      .find((level) => level.level === 'Unknown')
+      ?.topWords
+      .slice(0, 4)
+      .map((item) => item.word) || [];
+
+    recommendations.push({
+      id: 'unknown-words',
+      priority: 'High',
+      title: '先檢查 Unknown words',
+      reason: `Unknown 詞約占 ${(unknownRatio * 100).toFixed(0)}%，可能混有拼字、專有名詞或字典未收錄詞。`,
+      action: '優先檢查高頻 Unknown words；若是正確詞彙，可以加入個人字典或調整 CEFR 標記。',
+      examples: unknownWords.length ? unknownWords : ['拼字檢查', '專有名詞', '字典補充'],
+    });
+  }
+
+  if (advancedRatio < 0.1 && totalWords >= 120) {
+    recommendations.push({
+      id: 'advanced-vocabulary',
+      priority: 'Medium',
+      title: '補強 B2 以上論述詞彙',
+      reason: `B2-C2 詞彙目前約占 ${(advancedRatio * 100).toFixed(0)}%，文章可能偏基礎敘述。`,
+      action: '挑 2-4 個核心概念換成更精準的抽象詞，讓文章更接近 B2/C1 論述。',
+      examples: ['influence', 'conséquence', 'perspective', 'responsabilité'],
+    });
+  }
+
+  if (!getPatternCount(analysis.patternMatches, '轉折')) {
+    recommendations.push({
+      id: 'missing-contrast',
+      priority: 'High',
+      title: '加入轉折句型',
+      reason: '目前沒有偵測到明顯轉折，論述可能只往單一方向推進。',
+      action: '在第二段或反方觀點前加入轉折，讓文章更有層次。',
+      examples: ['cependant', 'en revanche', 'toutefois'],
+    });
+  }
+
+  if (!getPatternCount(analysis.patternMatches, '舉例')) {
+    recommendations.push({
+      id: 'missing-example',
+      priority: 'Medium',
+      title: '補一個具體例子',
+      reason: '目前沒有偵測到舉例句型，主張可能缺少支撐。',
+      action: '在主要觀點後加一個例子，說明這個現象如何出現在生活、學校或工作中。',
+      examples: ['par exemple', 'notamment', 'comme'],
+    });
+  }
+
+  if (!getPatternCount(analysis.patternMatches, '結果')) {
+    recommendations.push({
+      id: 'missing-result',
+      priority: 'Medium',
+      title: '補強因果或結果',
+      reason: '目前較少結果表達，讀者可能不容易看出前後推論。',
+      action: '在原因或例子後加入結果句，讓段落邏輯更清楚。',
+      examples: ['donc', 'par conséquent', "c'est pourquoi"],
+    });
+  }
+
+  if (!getPatternCount(analysis.patternMatches, '結論')) {
+    recommendations.push({
+      id: 'missing-conclusion',
+      priority: 'Medium',
+      title: '加上明確結論',
+      reason: '目前沒有偵測到結論句型，文章收尾可能不夠清楚。',
+      action: '最後一段用一句總結立場，再補一句平衡或建議。',
+      examples: ['en conclusion', 'pour conclure', 'finalement'],
+    });
+  }
+
+  if (analysis.repeatedPhrases.length >= 3) {
+    recommendations.push({
+      id: 'repeated-phrases',
+      priority: 'Medium',
+      title: '降低重複片語',
+      reason: `偵測到 ${analysis.repeatedPhrases.length} 組重複片語，文章節奏可能偏單調。`,
+      action: '保留關鍵主題詞，但把部分重複名詞換成代名詞、同義詞或概括表達。',
+      examples: analysis.repeatedPhrases.slice(0, 3).map((item) => item.phrase),
+    });
+  }
+
+  if (analysis.sentenceStarts.length) {
+    recommendations.push({
+      id: 'sentence-starts',
+      priority: 'Medium',
+      title: '變化句首節奏',
+      reason: '部分句子使用相似開頭，讀起來可能像清單。',
+      action: '交替使用順序、補充、轉折與結果開頭，讓段落推進更自然。',
+      examples: ["D'abord", 'De plus', 'En revanche', 'Ainsi'],
+    });
+  }
+
+  if (topWordRatio >= 0.28 && analysis.topWords.length >= 3) {
+    recommendations.push({
+      id: 'top-word-concentration',
+      priority: 'Low',
+      title: '分散高頻主題詞',
+      reason: `前三個內容詞占內容詞約 ${(topWordRatio * 100).toFixed(0)}%，用詞可能過度集中。`,
+      action: '把部分重複主題詞改成同義表達，或用更具體的名詞補充觀點。',
+      examples: analysis.topWords.slice(0, 3).map((item) => item.word),
+    });
+  }
+
+  if (!recommendations.length) {
+    recommendations.push({
+      id: 'balanced-draft',
+      priority: 'Next',
+      title: '這篇文章結構相對平衡',
+      reason: '目前沒有明顯高風險問題，詞彙、句型與重複度都在可接受範圍。',
+      action: '下一步可以儲存這次分析，之後比較 B2+ 詞彙比例和 Unknown words 是否下降。',
+      examples: ['儲存分析', '下次比較', '追蹤進步'],
+    });
+  }
+
+  const priorityRank = { High: 0, Medium: 1, Low: 2, Next: 3, Start: 4 };
+  return recommendations
+    .sort((a, b) => priorityRank[a.priority] - priorityRank[b.priority])
+    .slice(0, 5);
+}
+
 function analyzeText(text) {
   const words = tokenize(text);
   const rawWordRecords = getRawWordRecords(text);
@@ -329,6 +551,12 @@ function analyzeText(text) {
   const sentenceStarts = getSentenceStarts(text);
   const cefrAnalysis = getCefrAnalysis(cefrWordCounts);
   const autoDictionaryDraft = getAutoDictionaryDraft(wordCounts, shapeStats);
+  const unknownReview = getUnknownReview(
+    wordCounts,
+    cefrExcludedWordCounts,
+    shapeStats,
+    autoDictionaryDraft,
+  );
   const patternMatches = patternRules.map((rule) => {
     const matches = [...text.matchAll(createPhraseRegex(rule.pattern))]
       .map((match) => match[2].toLowerCase());
@@ -338,6 +566,16 @@ function analyzeText(text) {
       examples: [...new Set(matches)].slice(0, 4),
     };
   }).filter((pattern) => pattern.count > 0);
+  const partialAnalysis = {
+    words,
+    contentWords,
+    cefrWordCounts,
+    topWords,
+    cefrAnalysis,
+    repeatedPhrases,
+    sentenceStarts,
+    patternMatches,
+  };
 
   return {
     words,
@@ -349,9 +587,11 @@ function analyzeText(text) {
     topWords,
     cefrAnalysis,
     autoDictionaryDraft,
+    unknownReview,
     repeatedPhrases,
     sentenceStarts,
     patternMatches,
+    recommendations: getActionRecommendations(partialAnalysis),
     sentenceCount: getSentences(text).length,
     uniqueCount: new Set(contentWords).size,
   };
@@ -363,6 +603,7 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [historyRefreshIndex, setHistoryRefreshIndex] = useState(0);
+  const [dictionaryCopyStatus, setDictionaryCopyStatus] = useState('');
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
   const analysis = useMemo(() => analyzeText(text), [text]);
   const analysisSnapshot = useMemo(() => ({
@@ -434,6 +675,19 @@ export default function App() {
       isActive = false;
     };
   }, [session?.user?.id, historyRefreshIndex]);
+
+  const copyDictionaryDraft = async () => {
+    if (!analysis.unknownReview.pendingDictionary.length) return;
+
+    try {
+      await navigator.clipboard.writeText(analysis.unknownReview.json);
+      setDictionaryCopyStatus('已複製待補字典 JSON。');
+    } catch {
+      setDictionaryCopyStatus('複製失敗。');
+    }
+
+    window.setTimeout(() => setDictionaryCopyStatus(''), 1800);
+  };
 
   useEffect(() => {
     const elements = document.querySelectorAll('[data-reveal]');
@@ -548,7 +802,12 @@ export default function App() {
             <div className="bar-chart">
               {analysis.topWords.slice(0, 12).map((item, index) => (
                 <div className="bar-row" key={item.word} style={{ '--index': index }}>
-                  <span>{item.word}</span>
+                  <span className="bar-row__word">
+                    <span>{item.word}</span>
+                    {showChineseGlosses && getChineseGlossForWord(item.word) ? (
+                      <small>{getChineseGlossForWord(item.word)}</small>
+                    ) : null}
+                  </span>
                   <div className="bar-track">
                     <div style={{ width: `${(item.count / maxCount) * 100}%` }} />
                   </div>
@@ -583,6 +842,41 @@ export default function App() {
           </section>
         </section>
 
+        {showActionRecommendations ? (
+          <section className="recommendations-panel" id="recommendations" data-reveal>
+            <div className="section-title">
+              <div>
+                <p className="eyebrow">Next actions</p>
+                <h2>分析後的行動建議</h2>
+              </div>
+            </div>
+            <div className="recommendation-grid">
+              {analysis.recommendations.map((item, index) => (
+                <article
+                  className="recommendation-card"
+                  key={item.id}
+                  data-priority={item.priority}
+                  style={{ '--index': index }}
+                >
+                  <div className="recommendation-card__heading">
+                    <span>{item.priority}</span>
+                    <strong>{item.title}</strong>
+                  </div>
+                  <p>{item.reason}</p>
+                  <p>{item.action}</p>
+                  {item.examples.length ? (
+                    <div className="recommendation-card__examples">
+                      {item.examples.map((example) => (
+                        <span key={example}>{example}</span>
+                      ))}
+                    </div>
+                  ) : null}
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         <section className="cefr-panel" id="cefr" data-reveal>
           <div className="section-title">
             <div>
@@ -590,7 +884,7 @@ export default function App() {
               <h2>CEFR 詞彙難度分析</h2>
             </div>
           </div>
-          {analysis.cefrExcludedWordCounts.length ? (
+          {showCefrExcludedNote && analysis.cefrExcludedWordCounts.length ? (
             <p className="cefr-panel__note">
               已排除 {analysis.cefrExcludedWordCounts.length} 個專有名詞、縮寫或非 CEFR 詞：
               {' '}
@@ -629,6 +923,83 @@ export default function App() {
               </article>
             ))}
           </div>
+          {showUnknownReview ? (
+            <div className="dictionary-builder" aria-labelledby="unknown-review-title">
+              <div className="dictionary-builder__heading">
+                <div>
+                  <p className="eyebrow">Unknown review</p>
+                  <h3 id="unknown-review-title">Unknown 詞彙檢查</h3>
+                </div>
+                <button
+                  className="dictionary-builder__copy"
+                  type="button"
+                  onClick={copyDictionaryDraft}
+                  disabled={!analysis.unknownReview.pendingDictionary.length}
+                >
+                  <Copy size={16} />
+                  複製 JSON
+                </button>
+              </div>
+              <div className="unknown-review-grid">
+                <article>
+                  <span>已排除</span>
+                  <strong>{analysis.unknownReview.excluded.length}</strong>
+                  <p>專有名詞、縮寫或非 CEFR 候選不納入難度比例。</p>
+                  {analysis.unknownReview.excluded.length ? (
+                    <div className="dictionary-builder__words">
+                      {analysis.unknownReview.excluded.map((item) => (
+                        <span key={item.word}>
+                          {item.word} <small>{item.reason}</small>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="empty-state">目前沒有明顯需要排除的詞。</p>
+                  )}
+                </article>
+                <article>
+                  <span>詞形已還原</span>
+                  <strong>{analysis.unknownReview.resolvedForms.length}</strong>
+                  <p>這些詞已透過 lemma 或字尾規則對應到 CEFR 詞彙。</p>
+                  {analysis.unknownReview.resolvedForms.length ? (
+                    <div className="dictionary-builder__words">
+                      {analysis.unknownReview.resolvedForms.map((item) => (
+                        <span key={`${item.word}-${item.normalizedWord}`}>
+                          {item.word}
+                          {' -> '}
+                          {item.normalizedWord}
+                          {' '}
+                          <small>{item.cefrLevel}</small>
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="empty-state">目前沒有需要顯示的詞形還原。</p>
+                  )}
+                </article>
+                <article>
+                  <span>待補字典</span>
+                  <strong>{analysis.unknownReview.totalPendingCount}</strong>
+                  <p>這些詞不是明顯專有名詞，也還沒有 CEFR 分級。</p>
+                  {analysis.unknownReview.pendingDictionary.length ? (
+                    <>
+                      <div className="dictionary-builder__words">
+                        {analysis.unknownReview.pendingDictionary.map((item) => (
+                          <span key={item.word}>
+                            {item.word} <small>{item.count}</small>
+                          </span>
+                        ))}
+                      </div>
+                      <pre className="dictionary-builder__json">{analysis.unknownReview.json}</pre>
+                    </>
+                  ) : (
+                    <p className="empty-state">目前沒有需要補進字典的 Unknown 詞。</p>
+                  )}
+                </article>
+              </div>
+              {dictionaryCopyStatus ? <small>{dictionaryCopyStatus}</small> : null}
+            </div>
+          ) : null}
         </section>
 
         <section className="patterns" id="patterns" data-reveal>
