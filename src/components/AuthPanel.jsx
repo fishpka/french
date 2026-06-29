@@ -22,27 +22,38 @@ export default function AuthPanel({ session }) {
       trackEvent('login_click');
     }
 
-    const { error } = mode === 'sign-up'
-      ? await supabase.auth.signUp({ email, password })
-      : await supabase.auth.signInWithPassword({ email, password });
+    try {
+      const { error } = mode === 'sign-up'
+        ? await supabase.auth.signUp({ email, password })
+        : await supabase.auth.signInWithPassword({ email, password });
 
-    if (error) {
-      setStatus(error.message);
-    } else if (mode === 'sign-up') {
-      setStatus('註冊完成。若 Supabase 要求驗證信箱，請先完成驗證。');
-    } else {
-      setStatus('已登入。');
+      if (error) {
+        setStatus(error.message);
+      } else if (mode === 'sign-up') {
+        setStatus('註冊完成。若 Supabase 要求驗證信箱，請先完成驗證。');
+      } else {
+        setStatus('已登入。');
+      }
+    } catch (error) {
+      setStatus(error.message || '驗證失敗。');
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   const signOut = async () => {
     if (!supabase) return;
     setIsLoading(true);
-    await supabase.auth.signOut();
-    setStatus('已登出。');
-    setIsLoading(false);
+    setStatus('');
+
+    try {
+      const { error } = await supabase.auth.signOut();
+      setStatus(error ? error.message : '已登出。');
+    } catch (error) {
+      setStatus(error.message || '登出失敗。');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isSupabaseConfigured) {

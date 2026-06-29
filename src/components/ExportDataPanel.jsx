@@ -36,18 +36,26 @@ function buildExport(records, userEmail) {
         normalizedWord: item.normalized_word || item.word,
         cefrLevel: item.cefr_level || 'Unknown',
         totalCount: 0,
-        sessions: 0,
+        sessionIds: new Set(),
         lastSeenAt: session.created_at,
       };
 
       current.totalCount += item.count || 0;
-      current.sessions += 1;
+      current.sessionIds.add(session.id);
       current.lastSeenAt = session.created_at;
       aggregate.set(key, current);
     });
   });
 
   const wordFrequency = [...aggregate.values()]
+    .map((item) => ({
+      word: item.word,
+      normalizedWord: item.normalizedWord,
+      cefrLevel: item.cefrLevel,
+      totalCount: item.totalCount,
+      sessions: item.sessionIds.size,
+      lastSeenAt: item.lastSeenAt,
+    }))
     .sort((a, b) => b.totalCount - a.totalCount || a.normalizedWord.localeCompare(b.normalizedWord));
 
   const sessions = records.map((session) => ({

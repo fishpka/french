@@ -1,5 +1,5 @@
 import { Trash2 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { deleteAnalysisSession } from '../lib/analysisPersistence.js';
 import { trackEvent } from '../lib/analytics.js';
 
@@ -22,6 +22,9 @@ export default function HistoryDashboard({
   onChanged,
   onRequireAuth,
 }) {
+  const [deleteStatus, setDeleteStatus] = useState('');
+  const [deletingSessionId, setDeletingSessionId] = useState('');
+
   useEffect(() => {
     if (hasTrackedHistoryView) return;
     hasTrackedHistoryView = true;
@@ -29,8 +32,18 @@ export default function HistoryDashboard({
   }, []);
 
   const removeSession = async (sessionId) => {
-    await deleteAnalysisSession(sessionId);
-    onChanged?.();
+    setDeletingSessionId(sessionId);
+    setDeleteStatus('');
+
+    try {
+      await deleteAnalysisSession(sessionId);
+      setDeleteStatus('已刪除分析紀錄。');
+      onChanged?.();
+    } catch (error) {
+      setDeleteStatus(error.message || '刪除失敗。');
+    } finally {
+      setDeletingSessionId('');
+    }
   };
 
   return (
@@ -52,6 +65,7 @@ export default function HistoryDashboard({
         <p className="empty-state">載入分析紀錄中...</p>
       ) : history.length ? (
         <div className="history-list">
+          {deleteStatus ? <p className="empty-state">{deleteStatus}</p> : null}
           {history.map((item) => (
             <article className="history-card" key={item.id}>
               <div className="history-card__heading">
@@ -59,7 +73,12 @@ export default function HistoryDashboard({
                   <time dateTime={item.created_at}>{formatDate(item.created_at)}</time>
                   <strong>{item.unique_words} 個不重複詞</strong>
                 </div>
-                <button type="button" onClick={() => removeSession(item.id)} aria-label="刪除分析紀錄">
+                <button
+                  type="button"
+                  onClick={() => removeSession(item.id)}
+                  disabled={deletingSessionId === item.id}
+                  aria-label="刪除分析紀錄"
+                >
                   <Trash2 size={15} />
                 </button>
               </div>

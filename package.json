@@ -8,7 +8,6 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
     "@vitejs/plugin-react": "latest",
-    "lottie-react": "^2.4.1",
     "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",

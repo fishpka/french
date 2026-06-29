@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 function getMonthKey(value) {
   return new Intl.DateTimeFormat('zh-TW', {
     year: 'numeric',
@@ -56,7 +58,7 @@ function buildMonthlyRows(history) {
 }
 
 export default function MonthlyComparison({ history, isAuthenticated, onRequireAuth }) {
-  const rows = buildMonthlyRows(history);
+  const rows = useMemo(() => buildMonthlyRows(history), [history]);
 
   return (
     <section className="monthly-panel" id="monthly-comparison" data-reveal>

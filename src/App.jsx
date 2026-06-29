@@ -45,19 +45,28 @@ const stopwords = new Set([
 ]);
 
 const patternRules = [
-  { label: '表達意見', regex: /\b(je pense que|à mon avis|selon moi|personnellement)\b/gi },
-  { label: '必要性', regex: /\b(il faut|il est important de|il est nécessaire de|on doit)\b/gi },
-  { label: '舉例', regex: /\b(par exemple|notamment|comme)\b/gi },
-  { label: '轉折', regex: /\b(cependant|pourtant|en revanche|mais|toutefois)\b/gi },
-  { label: '順序', regex: /\b(d'abord|ensuite|puis|enfin|premièrement|deuxièmement)\b/gi },
-  { label: '結果', regex: /\b(donc|ainsi|c'est pourquoi|par conséquent|cela permet de)\b/gi },
-  { label: '結論', regex: /\b(en conclusion|pour conclure|en résumé|finalement)\b/gi },
-  { label: '平衡論述', regex: /\b(d'un côté|de l'autre côté|non seulement|mais aussi|tout dépend)\b/gi },
+  { label: '表達意見', pattern: 'je pense que|à mon avis|selon moi|personnellement' },
+  { label: '必要性', pattern: 'il faut|il est important de|il est nécessaire de|on doit' },
+  { label: '舉例', pattern: 'par exemple|notamment|comme' },
+  { label: '轉折', pattern: 'cependant|pourtant|en revanche|mais|toutefois' },
+  { label: '順序', pattern: "d'abord|ensuite|puis|enfin|premièrement|deuxièmement" },
+  { label: '結果', pattern: "donc|ainsi|c'est pourquoi|par conséquent|cela permet de" },
+  { label: '結論', pattern: 'en conclusion|pour conclure|en résumé|finalement' },
+  { label: '平衡論述', pattern: "d'un côté|de l'autre côté|non seulement|mais aussi|tout dépend" },
 ];
 
 const cefrLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'Unknown'];
 const autoDictionaryDefaultLevel = 'B2';
 const autoDictionaryLimit = 20;
+const frenchLetterClass = 'a-zàâäçéèêëîïôöùûüÿñæœ';
+const sentenceDelimiter = /[.!?。！？\n]+/;
+function createWordPattern() {
+  return new RegExp(`[${frenchLetterClass}]+(?:[’'-][${frenchLetterClass}]+)*`, 'gi');
+}
+
+function createPhraseRegex(pattern) {
+  return new RegExp(`(^|[^${frenchLetterClass}])(${pattern})(?=$|[^${frenchLetterClass}])`, 'giu');
+}
 
 function normalizeWord(word) {
   return word.toLowerCase().replace(/[’]/g, "'").replace(/^['-]+|['-]+$/g, '');
@@ -115,13 +124,12 @@ function normalizeFrenchWord(word) {
 }
 
 function tokenize(text) {
-  const matches = text.match(/[a-zàâäçéèêëîïôöùûüÿñæœ]+(?:[’'-][a-zàâäçéèêëîïôöùûüÿñæœ]+)*/gi);
+  const matches = text.match(createWordPattern());
   return matches ? matches.map(normalizeWord).filter((word) => word.length > 1) : [];
 }
 
 function getRawWordRecords(text) {
-  const wordPattern = /[a-zàâäçéèêëîïôöùûüÿñæœ]+(?:[’'-][a-zàâäçéèêëîïôöùûüÿñæœ]+)*/gi;
-  return [...text.matchAll(wordPattern)].map((match) => ({
+  return [...text.matchAll(createWordPattern())].map((match) => ({
     word: match[0],
     normalizedWord: normalizeWord(match[0]),
     index: match.index ?? 0,
@@ -139,23 +147,30 @@ function getWordCountSignature(wordCounts) {
 }
 
 function getNgrams(words) {
-  const phrases = [];
+  const phraseCounts = new Map();
+
   for (let size = 2; size <= 5; size += 1) {
     for (let index = 0; index <= words.length - size; index += 1) {
       const slice = words.slice(index, index + size);
-      const contentCount = slice.filter((word) => !stopwords.has(word)).length;
-      if (contentCount === 0) continue;
-      phrases.push(slice.join(' '));
+      if (slice.every((word) => stopwords.has(word))) continue;
+      const phrase = slice.join(' ');
+      phraseCounts.set(phrase, (phraseCounts.get(phrase) || 0) + 1);
     }
   }
-  return countItems(phrases)
+
+  return [...phraseCounts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .filter(([, count]) => count >= 2)
     .slice(0, 18)
     .map(([phrase, count]) => ({ phrase, count }));
 }
 
+function getSentences(text) {
+  return text.split(sentenceDelimiter).map((sentence) => sentence.trim()).filter(Boolean);
+}
+
 function getSentenceStarts(text) {
-  const sentences = text.split(/[.!?。！？\n]+/).map((sentence) => sentence.trim()).filter(Boolean);
+  const sentences = getSentences(text);
   const starts = sentences
     .map((sentence) => tokenize(sentence).slice(0, 5).join(' '))
     .filter((start) => start.split(' ').length >= 3);
@@ -208,10 +223,10 @@ function isSentenceStart(text, index) {
   return !before || /[.!?。！？\n]$/.test(before);
 }
 
-function getWordShapeStats(text) {
+function getWordShapeStats(records, text) {
   const stats = new Map();
 
-  getRawWordRecords(text).forEach(({ word, normalizedWord, index }) => {
+  records.forEach(({ word, normalizedWord, index }) => {
     const current = stats.get(normalizedWord) || {
       hasDigit: false,
       hasLowercaseStart: false,
@@ -247,11 +262,10 @@ function shouldExcludeDictionaryCandidate(word, shapeStats) {
   return Boolean(shapeStats?.hasCapitalizedNonSentenceStart && !shapeStats?.hasLowercaseStart);
 }
 
-function getCefrExcludedWords(text) {
-  const shapeStats = getWordShapeStats(text);
+function getCefrExcludedWords(records, shapeStats) {
   const excludedWords = new Set();
 
-  getRawWordRecords(text).forEach(({ normalizedWord }) => {
+  records.forEach(({ normalizedWord }) => {
     if (shouldExcludeDictionaryCandidate(normalizedWord, shapeStats.get(normalizedWord))) {
       excludedWords.add(normalizedWord);
     }
@@ -260,8 +274,7 @@ function getCefrExcludedWords(text) {
   return excludedWords;
 }
 
-function getAutoDictionaryDraft(wordCounts, text) {
-  const shapeStats = getWordShapeStats(text);
+function getAutoDictionaryDraft(wordCounts, shapeStats) {
   const entries = wordCounts
     .map(({ word, count }) => {
       const normalizedWord = normalizeFrenchWord(word);
@@ -304,19 +317,21 @@ function getAutoDictionaryDraft(wordCounts, text) {
 
 function analyzeText(text) {
   const words = tokenize(text);
+  const rawWordRecords = getRawWordRecords(text);
+  const shapeStats = getWordShapeStats(rawWordRecords, text);
   const contentWords = words.filter((word) => !stopwords.has(word) && word.length >= 3);
   const wordCounts = countItems(contentWords).map(([word, count]) => ({ word, count }));
-  const cefrExcludedWords = getCefrExcludedWords(text);
+  const cefrExcludedWords = getCefrExcludedWords(rawWordRecords, shapeStats);
   const cefrWordCounts = wordCounts.filter(({ word }) => !cefrExcludedWords.has(word));
   const cefrExcludedWordCounts = wordCounts.filter(({ word }) => cefrExcludedWords.has(word));
   const topWords = wordCounts.slice(0, 24);
-  const allWordCounts = countItems(words);
   const repeatedPhrases = getNgrams(words);
   const sentenceStarts = getSentenceStarts(text);
   const cefrAnalysis = getCefrAnalysis(cefrWordCounts);
-  const autoDictionaryDraft = getAutoDictionaryDraft(wordCounts, text);
+  const autoDictionaryDraft = getAutoDictionaryDraft(wordCounts, shapeStats);
   const patternMatches = patternRules.map((rule) => {
-    const matches = [...text.matchAll(rule.regex)].map((match) => match[0].toLowerCase());
+    const matches = [...text.matchAll(createPhraseRegex(rule.pattern))]
+      .map((match) => match[2].toLowerCase());
     return {
       label: rule.label,
       count: matches.length,
@@ -332,13 +347,12 @@ function analyzeText(text) {
     cefrExcludedWords,
     cefrExcludedWordCounts,
     topWords,
-    allWordCounts,
     cefrAnalysis,
     autoDictionaryDraft,
     repeatedPhrases,
     sentenceStarts,
     patternMatches,
-    sentenceCount: text.split(/[.!?。！？]+/).filter((sentence) => sentence.trim()).length,
+    sentenceCount: getSentences(text).length,
     uniqueCount: new Set(contentWords).size,
   };
 }
@@ -349,7 +363,6 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [historyRefreshIndex, setHistoryRefreshIndex] = useState(0);
-  const [dictionaryCopyStatus, setDictionaryCopyStatus] = useState('');
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
   const analysis = useMemo(() => analyzeText(text), [text]);
   const analysisSnapshot = useMemo(() => ({
@@ -421,19 +434,6 @@ export default function App() {
       isActive = false;
     };
   }, [session?.user?.id, historyRefreshIndex]);
-
-  const copyDictionaryDraft = async () => {
-    if (!analysis.autoDictionaryDraft.entries.length) return;
-
-    try {
-      await navigator.clipboard.writeText(analysis.autoDictionaryDraft.json);
-      setDictionaryCopyStatus('已複製');
-    } catch {
-      setDictionaryCopyStatus('複製失敗');
-    }
-
-    window.setTimeout(() => setDictionaryCopyStatus(''), 1800);
-  };
 
   useEffect(() => {
     const elements = document.querySelectorAll('[data-reveal]');
