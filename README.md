@@ -9,6 +9,7 @@ Features:
 - Render bar charts and a word cloud
 - Detect repeated phrases and common B2 argument patterns
 - Works fully in the browser without an API
+- Optionally calls a local spaCy backend for better French lemmatization and proper noun detection
 
 ## Run Locally
 
@@ -22,6 +23,27 @@ npm run dev
 ```bash
 npm run build
 ```
+
+## Optional spaCy Backend
+
+The frontend can call a local FastAPI service for French token analysis. This improves CEFR matching for inflected forms and helps filter proper nouns from Unknown/CEFR results.
+
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python3 -m spacy download fr_core_news_sm
+uvicorn app:app --reload --host 127.0.0.1 --port 8000
+```
+
+Configure the frontend:
+
+```bash
+VITE_FRENCH_NLP_API_URL=http://127.0.0.1:8000
+```
+
+Without `VITE_FRENCH_NLP_API_URL`, the app keeps using the browser-only fallback rules.
 
 ## French-Chinese Glosses
 

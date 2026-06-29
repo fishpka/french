@@ -63,6 +63,7 @@ const showActionRecommendations = false;
 const showUnknownReview = false;
 const showCefrExcludedNote = false;
 const showChineseGlosses = false;
+const frenchNlpApiUrl = import.meta.env.VITE_FRENCH_NLP_API_URL?.trim() || '';
 const frenchLetterClass = 'a-zàâäçéèêëîïôöùûüÿñæœ';
 const sentenceDelimiter = /[.!?。！？\n]+/;
 const advancedCefrLevels = new Set(['B2', 'C1', 'C2']);
@@ -82,19 +83,58 @@ function getLemmaFromMapping(word) {
   return frenchLemmaMap[word] || null;
 }
 
-function isKnownLemma(word) {
-  return Boolean(getLemmaFromMapping(word) || cefrVocabulary[word]);
+function getCefrVocabularyLevel(word) {
+  return cefrVocabulary[normalizeWord(word)] || null;
 }
 
-function normalizeFrenchWord(word) {
+function isKnownLemma(word) {
+  return Boolean(getLemmaFromMapping(word) || getCefrVocabularyLevel(word));
+}
+
+function buildNlpTokenMap(tokens) {
+  const map = new Map();
+
+  tokens.forEach((token) => {
+    const word = normalizeWord(token.text || '');
+    if (!word) return;
+
+    const lemma = normalizeWord(token.lemma || '');
+    const current = map.get(word) || {
+      lemma: '',
+      isProperNoun: false,
+    };
+
+    if (lemma && lemma !== word && lemma !== '-pron-') {
+      current.lemma = lemma;
+    }
+
+    current.isProperNoun = current.isProperNoun || token.is_proper_noun || token.pos === 'PROPN';
+    map.set(word, current);
+  });
+
+  return map;
+}
+
+function getNlpLemmaOverride(word, nlpTokenMap) {
+  const token = nlpTokenMap?.get(normalizeWord(word));
+  if (!token?.lemma) return '';
+  return token.lemma;
+}
+
+function normalizeFrenchWord(word, nlpTokenMap) {
   let normalized = normalizeWord(word)
     .replace(/^[^a-zàâäçéèêëîïôöùûüÿñæœ]+|[^a-zàâäçéèêëîïôöùûüÿñæœ]+$/gi, '')
     .replace(/^(?:l|d|j|m|t|s|n|c|qu)'/i, '');
 
+  const nlpLemma = getNlpLemmaOverride(normalized, nlpTokenMap);
+  if (nlpLemma && (getCefrVocabularyLevel(nlpLemma) || getLemmaFromMapping(nlpLemma))) {
+    return getLemmaFromMapping(nlpLemma) || nlpLemma;
+  }
+
   const mappedLemma = getLemmaFromMapping(normalized);
   if (mappedLemma) return mappedLemma;
 
-  if (cefrVocabulary[normalized]) return normalized;
+  if (getCefrVocabularyLevel(normalized)) return normalized;
 
   const candidates = [];
 
@@ -186,7 +226,7 @@ function getSentenceStarts(text) {
     .map(([phrase, count]) => ({ phrase, count }));
 }
 
-function getCefrAnalysis(wordCounts) {
+function getCefrAnalysis(wordCounts, nlpTokenMap) {
   const totalOccurrences = wordCounts.reduce((sum, item) => sum + item.count, 0);
   const levelMap = new Map(cefrLevels.map((level) => [level, {
     level,
@@ -197,9 +237,9 @@ function getCefrAnalysis(wordCounts) {
   }]));
 
   wordCounts.forEach(({ word, count }) => {
-    const normalizedWord = normalizeFrenchWord(word);
-    const originalLevel = cefrVocabulary[word];
-    const normalizedLevel = cefrVocabulary[normalizedWord];
+    const normalizedWord = normalizeFrenchWord(word, nlpTokenMap);
+    const originalLevel = getCefrVocabularyLevel(word);
+    const normalizedLevel = getCefrVocabularyLevel(normalizedWord);
     const level = originalLevel || normalizedLevel || 'Unknown';
     const record = levelMap.get(level);
     record.uniqueWords += 1;
@@ -219,13 +259,13 @@ function getCefrAnalysis(wordCounts) {
   });
 }
 
-function getCefrLevelForWord(word) {
-  const normalizedWord = normalizeFrenchWord(word);
-  return cefrVocabulary[word] || cefrVocabulary[normalizedWord] || 'Unknown';
+function getCefrLevelForWord(word, nlpTokenMap) {
+  const normalizedWord = normalizeFrenchWord(word, nlpTokenMap);
+  return getCefrVocabularyLevel(word) || getCefrVocabularyLevel(normalizedWord) || 'Unknown';
 }
 
-function getChineseGlossForWord(word) {
-  const normalizedWord = normalizeFrenchWord(word);
+function getChineseGlossForWord(word, nlpTokenMap) {
+  const normalizedWord = normalizeFrenchWord(word, nlpTokenMap);
   return frenchChineseGlosses[word] || frenchChineseGlosses[normalizedWord] || '';
 }
 
@@ -273,11 +313,14 @@ function shouldExcludeDictionaryCandidate(word, shapeStats) {
   return Boolean(shapeStats?.hasCapitalizedNonSentenceStart && !shapeStats?.hasLowercaseStart);
 }
 
-function getCefrExcludedWords(records, shapeStats) {
+function getCefrExcludedWords(records, shapeStats, nlpTokenMap) {
   const excludedWords = new Set();
 
   records.forEach(({ normalizedWord }) => {
-    if (shouldExcludeDictionaryCandidate(normalizedWord, shapeStats.get(normalizedWord))) {
+    if (
+      nlpTokenMap?.get(normalizedWord)?.isProperNoun
+      || shouldExcludeDictionaryCandidate(normalizedWord, shapeStats.get(normalizedWord))
+    ) {
       excludedWords.add(normalizedWord);
     }
   });
@@ -285,12 +328,12 @@ function getCefrExcludedWords(records, shapeStats) {
   return excludedWords;
 }
 
-function getAutoDictionaryDraft(wordCounts, shapeStats) {
+function getAutoDictionaryDraft(wordCounts, shapeStats, nlpTokenMap) {
   const entries = wordCounts
     .map(({ word, count }) => {
-      const normalizedWord = normalizeFrenchWord(word);
-      const originalLevel = cefrVocabulary[word];
-      const normalizedLevel = cefrVocabulary[normalizedWord];
+      const normalizedWord = normalizeFrenchWord(word, nlpTokenMap);
+      const originalLevel = getCefrVocabularyLevel(word);
+      const normalizedLevel = getCefrVocabularyLevel(normalizedWord);
       return {
         word,
         normalizedWord,
@@ -333,11 +376,11 @@ function getExcludedReason(shapeStats) {
   return '非 CEFR 候選';
 }
 
-function getUnknownReview(wordCounts, cefrExcludedWordCounts, shapeStats, autoDictionaryDraft) {
+function getUnknownReview(wordCounts, cefrExcludedWordCounts, shapeStats, autoDictionaryDraft, nlpTokenMap) {
   const resolvedForms = wordCounts
     .map(({ word, count }) => {
-      const normalizedWord = normalizeFrenchWord(word);
-      const cefrLevel = getCefrLevelForWord(word);
+      const normalizedWord = normalizeFrenchWord(word, nlpTokenMap);
+      const cefrLevel = getCefrLevelForWord(word, nlpTokenMap);
       return {
         word,
         normalizedWord,
@@ -537,25 +580,26 @@ function getActionRecommendations(analysis) {
     .slice(0, 5);
 }
 
-function analyzeText(text) {
+function analyzeText(text, nlpTokenMap = new Map()) {
   const words = tokenize(text);
   const rawWordRecords = getRawWordRecords(text);
   const shapeStats = getWordShapeStats(rawWordRecords, text);
   const contentWords = words.filter((word) => !stopwords.has(word) && word.length >= 3);
   const wordCounts = countItems(contentWords).map(([word, count]) => ({ word, count }));
-  const cefrExcludedWords = getCefrExcludedWords(rawWordRecords, shapeStats);
+  const cefrExcludedWords = getCefrExcludedWords(rawWordRecords, shapeStats, nlpTokenMap);
   const cefrWordCounts = wordCounts.filter(({ word }) => !cefrExcludedWords.has(word));
   const cefrExcludedWordCounts = wordCounts.filter(({ word }) => cefrExcludedWords.has(word));
   const topWords = wordCounts.slice(0, 24);
   const repeatedPhrases = getNgrams(words);
   const sentenceStarts = getSentenceStarts(text);
-  const cefrAnalysis = getCefrAnalysis(cefrWordCounts);
-  const autoDictionaryDraft = getAutoDictionaryDraft(wordCounts, shapeStats);
+  const cefrAnalysis = getCefrAnalysis(cefrWordCounts, nlpTokenMap);
+  const autoDictionaryDraft = getAutoDictionaryDraft(wordCounts, shapeStats, nlpTokenMap);
   const unknownReview = getUnknownReview(
     wordCounts,
     cefrExcludedWordCounts,
     shapeStats,
     autoDictionaryDraft,
+    nlpTokenMap,
   );
   const patternMatches = patternRules.map((rule) => {
     const matches = [...text.matchAll(createPhraseRegex(rule.pattern))]
@@ -605,7 +649,9 @@ export default function App() {
   const [historyRefreshIndex, setHistoryRefreshIndex] = useState(0);
   const [dictionaryCopyStatus, setDictionaryCopyStatus] = useState('');
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
-  const analysis = useMemo(() => analyzeText(text), [text]);
+  const [nlpTokens, setNlpTokens] = useState([]);
+  const nlpTokenMap = useMemo(() => buildNlpTokenMap(nlpTokens), [nlpTokens]);
+  const analysis = useMemo(() => analyzeText(text, nlpTokenMap), [text, nlpTokenMap]);
   const analysisSnapshot = useMemo(() => ({
     totalWords: analysis.words.length,
     contentWords: analysis.contentWords.length,
@@ -620,15 +666,15 @@ export default function App() {
     topWords: analysis.topWords.slice(0, 12).map(({ word, count }) => ({
       word,
       count,
-      cefrLevel: analysis.cefrExcludedWords.has(word) ? 'Excluded' : getCefrLevelForWord(word),
+      cefrLevel: analysis.cefrExcludedWords.has(word) ? 'Excluded' : getCefrLevelForWord(word, nlpTokenMap),
     })),
     wordFrequencies: analysis.wordCounts.map(({ word, count }) => ({
       word,
-      normalizedWord: normalizeFrenchWord(word),
+      normalizedWord: normalizeFrenchWord(word, nlpTokenMap),
       count,
-      cefrLevel: analysis.cefrExcludedWords.has(word) ? 'Excluded' : getCefrLevelForWord(word),
+      cefrLevel: analysis.cefrExcludedWords.has(word) ? 'Excluded' : getCefrLevelForWord(word, nlpTokenMap),
     })),
-  }), [analysis]);
+  }), [analysis, nlpTokenMap]);
   const maxCount = analysis.topWords[0]?.count || 1;
   const cloudWords = analysis.topWords.slice(0, 24);
   const cloudAnimationKey = useMemo(() => getWordCountSignature(cloudWords), [cloudWords]);
@@ -648,6 +694,38 @@ export default function App() {
 
     return () => subscription.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!frenchNlpApiUrl || !text.trim()) {
+      setNlpTokens([]);
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => {
+      fetch(`${frenchNlpApiUrl.replace(/\/$/, '')}/api/french-tokens`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+        signal: controller.signal,
+      })
+        .then((response) => {
+          if (!response.ok) throw new Error('French NLP API request failed');
+          return response.json();
+        })
+        .then((data) => {
+          setNlpTokens(Array.isArray(data.tokens) ? data.tokens : []);
+        })
+        .catch((error) => {
+          if (error.name !== 'AbortError') setNlpTokens([]);
+        });
+    }, 350);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [text]);
 
   useEffect(() => {
     if (!session?.user?.id) {
@@ -804,8 +882,8 @@ export default function App() {
                 <div className="bar-row" key={item.word} style={{ '--index': index }}>
                   <span className="bar-row__word">
                     <span>{item.word}</span>
-                    {showChineseGlosses && getChineseGlossForWord(item.word) ? (
-                      <small>{getChineseGlossForWord(item.word)}</small>
+                    {showChineseGlosses && getChineseGlossForWord(item.word, nlpTokenMap) ? (
+                      <small>{getChineseGlossForWord(item.word, nlpTokenMap)}</small>
                     ) : null}
                   </span>
                   <div className="bar-track">
