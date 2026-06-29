@@ -525,7 +525,9 @@ export default function App() {
             />
             <SaveAnalysisButton
               disabled={!analysis.wordCounts.length}
+              session={session}
               snapshot={analysisSnapshot}
+              onSaved={() => setHistoryRefreshIndex((index) => index + 1)}
             />
           </div>
 

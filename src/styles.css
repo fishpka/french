@@ -1772,6 +1772,12 @@ textarea:focus {
   margin-top: 14px;
 }
 
+.save-analysis__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .save-analysis button {
   width: fit-content;
   padding: 0 14px;
