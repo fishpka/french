@@ -8,6 +8,50 @@ function requireSupabase() {
   return supabase;
 }
 
+function isMissingRpcError(error) {
+  return (
+    error?.code === 'PGRST202'
+    || error?.message?.includes('Could not find the function public.save_analysis_session')
+  );
+}
+
+async function saveAnalysisSessionDirectly(client, userId, snapshot) {
+  const { data: session, error: sessionError } = await client
+    .from('analysis_sessions')
+    .insert({
+      user_id: userId,
+      total_words: snapshot.totalWords,
+      content_words: snapshot.contentWords,
+      unique_words: snapshot.uniqueWords,
+      sentence_count: snapshot.sentenceCount,
+      cefr_summary: snapshot.cefrSummary,
+      top_words: snapshot.topWords,
+    })
+    .select()
+    .single();
+
+  if (sessionError) throw sessionError;
+
+  const wordFrequencies = (snapshot.wordFrequencies || []).map((item) => ({
+    session_id: session.id,
+    user_id: userId,
+    word: item.word,
+    normalized_word: item.normalizedWord,
+    count: item.count,
+    cefr_level: item.cefrLevel || 'Unknown',
+  }));
+
+  if (wordFrequencies.length) {
+    const { error: wordsError } = await client
+      .from('word_frequencies')
+      .insert(wordFrequencies);
+
+    if (wordsError) throw wordsError;
+  }
+
+  return session;
+}
+
 export async function saveAnalysisSession(userId, snapshot) {
   const client = requireSupabase();
   if (!userId) throw new Error('User is not authenticated.');
@@ -21,6 +65,10 @@ export async function saveAnalysisSession(userId, snapshot) {
     p_top_words: snapshot.topWords,
     p_word_frequencies: snapshot.wordFrequencies,
   });
+
+  if (isMissingRpcError(error)) {
+    return saveAnalysisSessionDirectly(client, userId, snapshot);
+  }
 
   if (error) throw error;
   return session;
