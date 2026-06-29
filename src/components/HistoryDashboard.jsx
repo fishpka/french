@@ -15,7 +15,13 @@ function formatDate(value) {
   }).format(new Date(value));
 }
 
-export default function HistoryDashboard({ history, isLoading, onChanged }) {
+export default function HistoryDashboard({
+  history,
+  isAuthenticated,
+  isLoading,
+  onChanged,
+  onRequireAuth,
+}) {
   useEffect(() => {
     if (hasTrackedHistoryView) return;
     hasTrackedHistoryView = true;
@@ -35,7 +41,14 @@ export default function HistoryDashboard({ history, isLoading, onChanged }) {
           <h2>分析紀錄</h2>
         </div>
       </div>
-      {isLoading ? (
+      {!isAuthenticated ? (
+        <div className="auth-gate">
+          <p>分析功能不需要登入。若要查看已儲存的歷史紀錄、刪除紀錄或進行長期比較，請先登入。</p>
+          <button type="button" onClick={onRequireAuth}>
+            登入查看歷史紀錄
+          </button>
+        </div>
+      ) : isLoading ? (
         <p className="empty-state">載入分析紀錄中...</p>
       ) : history.length ? (
         <div className="history-list">

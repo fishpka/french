@@ -55,7 +55,7 @@ function buildMonthlyRows(history) {
     .sort((a, b) => b.key.localeCompare(a.key));
 }
 
-export default function MonthlyComparison({ history }) {
+export default function MonthlyComparison({ history, isAuthenticated, onRequireAuth }) {
   const rows = buildMonthlyRows(history);
 
   return (
@@ -66,7 +66,14 @@ export default function MonthlyComparison({ history }) {
           <h2>每月比較</h2>
         </div>
       </div>
-      {rows.length ? (
+      {!isAuthenticated ? (
+        <div className="auth-gate">
+          <p>每月比較需要讀取你的歷史分析紀錄。登入後即可比較不同月份的詞彙量、CEFR 分布與常用詞變化。</p>
+          <button type="button" onClick={onRequireAuth}>
+            登入比較歷史紀錄
+          </button>
+        </div>
+      ) : rows.length ? (
         <div className="monthly-table" role="table" aria-label="每月分析比較">
           <div className="monthly-table__head" role="row">
             <span role="columnheader">月份</span>

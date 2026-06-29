@@ -1,56 +1,24 @@
-import { Save } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { saveAnalysisSession } from '../lib/analysisPersistence.js';
+import { Search } from 'lucide-react';
+import { useState } from 'react';
 import { trackEvent } from '../lib/analytics.js';
 
-export default function SaveAnalysisButton({ disabled, session, snapshot, onRequireAuth, onSaved }) {
+export default function SaveAnalysisButton({ disabled, snapshot }) {
   const [status, setStatus] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [shouldSaveAfterAuth, setShouldSaveAfterAuth] = useState(false);
 
-  const persistAnalysis = async (userId) => {
-    if (!userId || !snapshot) return;
-
-    setIsSaving(true);
-    setStatus('');
-
-    try {
-      await saveAnalysisSession(userId, snapshot);
-      setStatus('已儲存分析結果。');
-      onSaved?.();
-    } catch (error) {
-      setStatus(error.message || '儲存失敗。');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const saveAnalysis = async () => {
+  const analyzeNow = () => {
     if (!snapshot) return;
 
-    trackEvent('save_analysis_click');
-
-    if (!session?.user?.id) {
-      setShouldSaveAfterAuth(true);
-      setStatus('登入後會自動儲存這次分析。');
-      onRequireAuth?.();
-      return;
-    }
-
-    await persistAnalysis(session.user.id);
+    trackEvent('analyze_click');
+    setStatus('已更新分析結果。');
+    document.getElementById('charts')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.setTimeout(() => setStatus(''), 1800);
   };
-
-  useEffect(() => {
-    if (!shouldSaveAfterAuth || !session?.user?.id) return;
-    setShouldSaveAfterAuth(false);
-    persistAnalysis(session.user.id);
-  }, [session?.user?.id, shouldSaveAfterAuth]);
 
   return (
     <div className="save-analysis">
-      <button type="button" onClick={saveAnalysis} disabled={disabled || isSaving}>
-        <Save size={16} />
-        {isSaving ? 'Saving' : 'Save My Progress'}
+      <button type="button" onClick={analyzeNow} disabled={disabled}>
+        <Search size={16} />
+        立即分析
       </button>
       {status ? <small>{status}</small> : null}
     </div>

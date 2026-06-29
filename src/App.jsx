@@ -247,6 +247,19 @@ function shouldExcludeDictionaryCandidate(word, shapeStats) {
   return Boolean(shapeStats?.hasCapitalizedNonSentenceStart && !shapeStats?.hasLowercaseStart);
 }
 
+function getCefrExcludedWords(text) {
+  const shapeStats = getWordShapeStats(text);
+  const excludedWords = new Set();
+
+  getRawWordRecords(text).forEach(({ normalizedWord }) => {
+    if (shouldExcludeDictionaryCandidate(normalizedWord, shapeStats.get(normalizedWord))) {
+      excludedWords.add(normalizedWord);
+    }
+  });
+
+  return excludedWords;
+}
+
 function getAutoDictionaryDraft(wordCounts, text) {
   const shapeStats = getWordShapeStats(text);
   const entries = wordCounts
@@ -293,11 +306,14 @@ function analyzeText(text) {
   const words = tokenize(text);
   const contentWords = words.filter((word) => !stopwords.has(word) && word.length >= 3);
   const wordCounts = countItems(contentWords).map(([word, count]) => ({ word, count }));
+  const cefrExcludedWords = getCefrExcludedWords(text);
+  const cefrWordCounts = wordCounts.filter(({ word }) => !cefrExcludedWords.has(word));
+  const cefrExcludedWordCounts = wordCounts.filter(({ word }) => cefrExcludedWords.has(word));
   const topWords = wordCounts.slice(0, 24);
   const allWordCounts = countItems(words);
   const repeatedPhrases = getNgrams(words);
   const sentenceStarts = getSentenceStarts(text);
-  const cefrAnalysis = getCefrAnalysis(wordCounts);
+  const cefrAnalysis = getCefrAnalysis(cefrWordCounts);
   const autoDictionaryDraft = getAutoDictionaryDraft(wordCounts, text);
   const patternMatches = patternRules.map((rule) => {
     const matches = [...text.matchAll(rule.regex)].map((match) => match[0].toLowerCase());
@@ -312,6 +328,9 @@ function analyzeText(text) {
     words,
     contentWords,
     wordCounts,
+    cefrWordCounts,
+    cefrExcludedWords,
+    cefrExcludedWordCounts,
     topWords,
     allWordCounts,
     cefrAnalysis,
@@ -347,18 +366,19 @@ export default function App() {
     topWords: analysis.topWords.slice(0, 12).map(({ word, count }) => ({
       word,
       count,
-      cefrLevel: getCefrLevelForWord(word),
+      cefrLevel: analysis.cefrExcludedWords.has(word) ? 'Excluded' : getCefrLevelForWord(word),
     })),
     wordFrequencies: analysis.wordCounts.map(({ word, count }) => ({
       word,
       normalizedWord: normalizeFrenchWord(word),
       count,
-      cefrLevel: getCefrLevelForWord(word),
+      cefrLevel: analysis.cefrExcludedWords.has(word) ? 'Excluded' : getCefrLevelForWord(word),
     })),
   }), [analysis]);
   const maxCount = analysis.topWords[0]?.count || 1;
   const cloudWords = analysis.topWords.slice(0, 24);
   const cloudAnimationKey = useMemo(() => getWordCountSignature(cloudWords), [cloudWords]);
+  const isAuthenticated = Boolean(session?.user?.id);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return undefined;
@@ -505,15 +525,12 @@ export default function App() {
             />
             <SaveAnalysisButton
               disabled={!analysis.wordCounts.length}
-              session={session}
               snapshot={analysisSnapshot}
-              onRequireAuth={() => setIsAuthPromptOpen(true)}
-              onSaved={() => setHistoryRefreshIndex((index) => index + 1)}
             />
           </div>
 
           <aside className="summary-panel" id="summary">
-            {session?.user?.id ? <AuthPanel session={session} /> : null}
+            <AuthPanel session={session} />
             <ExportDataPanel session={session} />
           </aside>
         </section>
@@ -566,9 +583,18 @@ export default function App() {
 
         <section className="cefr-panel" id="cefr" data-reveal>
           <div className="section-title">
-            <p className="eyebrow">CEFR</p>
-            <h2>CEFR 詞彙難度分析</h2>
+            <div>
+              <p className="eyebrow">CEFR</p>
+              <h2>CEFR 詞彙難度分析</h2>
+            </div>
           </div>
+          {analysis.cefrExcludedWordCounts.length ? (
+            <p className="cefr-panel__note">
+              已排除 {analysis.cefrExcludedWordCounts.length} 個專有名詞、縮寫或非 CEFR 詞：
+              {' '}
+              {analysis.cefrExcludedWordCounts.slice(0, 8).map(({ word }) => word).join(' · ')}
+            </p>
+          ) : null}
           <div className="cefr-grid">
             {analysis.cefrAnalysis.map((level) => (
               <article className="cefr-card" key={level.level} data-level={level.level}>
@@ -656,11 +682,17 @@ export default function App() {
 
         <HistoryDashboard
           history={history}
+          isAuthenticated={isAuthenticated}
           isLoading={isHistoryLoading}
           onChanged={() => setHistoryRefreshIndex((index) => index + 1)}
+          onRequireAuth={() => setIsAuthPromptOpen(true)}
         />
 
-        <MonthlyComparison history={history} />
+        <MonthlyComparison
+          history={history}
+          isAuthenticated={isAuthenticated}
+          onRequireAuth={() => setIsAuthPromptOpen(true)}
+        />
 
         <footer className="site-footer">
           <span>聯絡信箱</span>
@@ -681,12 +713,12 @@ export default function App() {
               ×
             </button>
             <div className="auth-modal__intro">
-              <p className="eyebrow">Save progress</p>
-              <h2 id="auth-modal-title">登入後儲存進度</h2>
-              <p>分析可以免費使用；只有在儲存個人進度時才需要登入。</p>
+              <p className="eyebrow">Account</p>
+              <h2 id="auth-modal-title">登入後使用歷史比較</h2>
+              <p>分析可以直接使用；只有儲存、查看歷史紀錄、比較每月趨勢時才需要登入。</p>
             </div>
             <div className="auth-modal__promo">
-              <strong>🔒 登入後即可追蹤你的法文成長：</strong>
+              <strong>登入後即可追蹤你的法文成長：</strong>
               <ul>
                 <li>保存所有分析紀錄</li>
                 <li>比較每月進步趨勢</li>
