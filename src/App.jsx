@@ -37,12 +37,12 @@ const stopwords = new Set([
   'chez', 'comme', 'comment', 'dans', 'de', 'des', 'du', 'elle', 'elles', 'en',
   'encore', 'entre', 'est', 'et', 'être', 'fait', 'faire', 'faut', 'fois', 'il',
   'ils', 'je', 'jusqu', 'la', 'le', 'les', 'leur', 'leurs', 'lui', 'mais', 'me',
-  'même', 'mes', 'moins', 'mon', 'ne', 'nos', 'notre', 'nous', 'on', 'ont', 'ou',
+  'même', 'mes', 'moins', 'mon', 'ma', 'ne', 'ni', 'nos', 'notre', 'nous', 'on', 'ont', 'or', 'ou',
   'où', 'par', 'parce', 'pas', 'peut', 'plus', 'pour', 'quand', 'que', 'quel',
   'quelle', 'quelles', 'quels', 'qui', 'quoi', 'sa', 'sans', 'se', 'ses', 'si',
-  'son', 'sont', 'sur', 'ta', 'tes', 'ton', 'tous', 'tout', 'toute', 'toutes',
+  'son', 'sont', 'sous', 'sur', 'ta', 'tes', 'ton', 'tous', 'tout', 'toute', 'toutes',
   'très', 'tu', 'un', 'une', 'vos', 'votre', 'vous', 'y', 'c', 'd', 'j', 'l',
-  'm', 'n', 'qu', 's', 't',
+  'm', 'n', 'qu', 's', 't', "c'", "c'est", "d'", "d'un", "j'", "l'", "m'", "n'", "qu'", "s'", "t'",
 ]);
 
 const patternRules = [
@@ -77,6 +77,16 @@ function createPhraseRegex(pattern) {
 
 function normalizeWord(word) {
   return word.toLowerCase().replace(/[’]/g, "'").replace(/^['-]+|['-]+$/g, '');
+}
+
+function shouldSkipWord(word) {
+  const normalized = normalizeWord(word);
+  return (
+    stopwords.has(normalized)
+    || /^\d+$/.test(normalized)
+    || normalized.length <= 1
+    || /^[.,!?;:'"«»—…]+$/.test(normalized)
+  );
 }
 
 function getLemmaFromMapping(word) {
@@ -171,7 +181,7 @@ function normalizeFrenchWord(word, nlpTokenMap) {
 
 function tokenize(text) {
   const matches = text.match(createWordPattern());
-  return matches ? matches.map(normalizeWord).filter((word) => word.length > 1) : [];
+  return matches ? matches.map(normalizeWord).filter((word) => !shouldSkipWord(word)) : [];
 }
 
 function getRawWordRecords(text) {
@@ -198,7 +208,7 @@ function getNgrams(words) {
   for (let size = 2; size <= 5; size += 1) {
     for (let index = 0; index <= words.length - size; index += 1) {
       const slice = words.slice(index, index + size);
-      if (slice.every((word) => stopwords.has(word))) continue;
+      if (slice.every(shouldSkipWord)) continue;
       const phrase = slice.join(' ');
       phraseCounts.set(phrase, (phraseCounts.get(phrase) || 0) + 1);
     }
@@ -584,7 +594,7 @@ function analyzeText(text, nlpTokenMap = new Map()) {
   const words = tokenize(text);
   const rawWordRecords = getRawWordRecords(text);
   const shapeStats = getWordShapeStats(rawWordRecords, text);
-  const contentWords = words.filter((word) => !stopwords.has(word) && word.length >= 3);
+  const contentWords = words.filter((word) => !shouldSkipWord(word) && word.length >= 3);
   const wordCounts = countItems(contentWords).map(([word, count]) => ({ word, count }));
   const cefrExcludedWords = getCefrExcludedWords(rawWordRecords, shapeStats, nlpTokenMap);
   const cefrWordCounts = wordCounts.filter(({ word }) => !cefrExcludedWords.has(word));
