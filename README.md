@@ -45,6 +45,23 @@ VITE_FRENCH_NLP_API_URL=http://127.0.0.1:8000
 
 Without `VITE_FRENCH_NLP_API_URL`, the app keeps using the browser-only fallback rules.
 
+## FLELex / Beacco CEFR Vocabulary
+
+The main CEFR vocabulary is generated from the official FLELex / Beacco TreeTagger TSV distributed by CENTAL:
+
+- Source page: https://cental.uclouvain.be/cefrlex/flelex/download/
+- Local raw file: `src/data/vendor/FleLex_TT_Beacco.tsv`
+- Generated module: `src/data/flelexBeaccoVocabulary.js`
+- License: CC BY-NC-SA 4.0
+
+The raw resource is lemma + POS. The generated browser dictionary is `word -> CEFR level`; when a word appears with multiple POS tags, the converter keeps the entry with the highest `freq_total`, using the lower CEFR level as a tie-breaker.
+
+Regenerate the local module after replacing the TSV:
+
+```bash
+npm run build:flelex
+```
+
 ## French-Chinese Glosses
 
 High-frequency chart glosses use `src/data/frenchChineseGlosses.js`.

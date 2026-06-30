@@ -1,4 +1,5 @@
 import { cefrVocabulary as mot2Vocabulary } from '../../public/mot2.js';
+import flelexBeaccoVocabulary from './flelexBeaccoVocabulary.js';
 
 const baseCefrVocabulary = {
   aller: 'A1',
@@ -242,6 +243,7 @@ const baseCefrVocabulary = {
 const cefrVocabulary = {
   ...baseCefrVocabulary,
   ...mot2Vocabulary,
+  ...flelexBeaccoVocabulary,
 };
 
 export default cefrVocabulary;
