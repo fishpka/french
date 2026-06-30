@@ -13,9 +13,12 @@ import { getAnalysisHistory } from './lib/analysisPersistence.js';
 import { trackEvent } from './lib/analytics.js';
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient.js';
 
+const showTopVocabulary = false;
+
 const links = [
   { label: '分析器', href: '#analyzer' },
   { label: '圖表', href: '#charts' },
+  ...(showTopVocabulary ? [{ label: 'Top 100', href: '#top-vocabulary' }] : []),
   { label: 'CEFR', href: '#cefr' },
   { label: '句型', href: '#patterns' },
   { label: '歷史', href: '#history' },
@@ -267,6 +270,20 @@ function getCefrAnalysis(wordCounts, nlpTokenMap) {
         .slice(0, 5),
     };
   });
+}
+
+function getTopVocabulary(words, nlpTokenMap) {
+  const normalizedWords = words
+    .map((word) => normalizeFrenchWord(word, nlpTokenMap))
+    .filter((word) => word && !shouldSkipWord(word) && word.length >= 3);
+
+  return countItems(normalizedWords)
+    .slice(0, 100)
+    .map(([word, count]) => ({
+      word,
+      count,
+      cefrLevel: getCefrLevelForWord(word, nlpTokenMap),
+    }));
 }
 
 function getCefrLevelForWord(word, nlpTokenMap) {
@@ -600,6 +617,7 @@ function analyzeText(text, nlpTokenMap = new Map()) {
   const cefrWordCounts = wordCounts.filter(({ word }) => !cefrExcludedWords.has(word));
   const cefrExcludedWordCounts = wordCounts.filter(({ word }) => cefrExcludedWords.has(word));
   const topWords = wordCounts.slice(0, 24);
+  const topVocabulary = getTopVocabulary(contentWords, nlpTokenMap);
   const repeatedPhrases = getNgrams(words);
   const sentenceStarts = getSentenceStarts(text);
   const cefrAnalysis = getCefrAnalysis(cefrWordCounts, nlpTokenMap);
@@ -639,6 +657,7 @@ function analyzeText(text, nlpTokenMap = new Map()) {
     cefrExcludedWords,
     cefrExcludedWordCounts,
     topWords,
+    topVocabulary,
     cefrAnalysis,
     autoDictionaryDraft,
     unknownReview,
@@ -658,6 +677,7 @@ export default function App() {
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [historyRefreshIndex, setHistoryRefreshIndex] = useState(0);
   const [dictionaryCopyStatus, setDictionaryCopyStatus] = useState('');
+  const [topVocabularyCopyStatus, setTopVocabularyCopyStatus] = useState('');
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
   const [nlpTokens, setNlpTokens] = useState([]);
   const nlpTokenMap = useMemo(() => buildNlpTokenMap(nlpTokens), [nlpTokens]);
@@ -775,6 +795,31 @@ export default function App() {
     }
 
     window.setTimeout(() => setDictionaryCopyStatus(''), 1800);
+  };
+
+  const copyTopVocabulary = async () => {
+    if (!analysis.topVocabulary.length) return;
+
+    const escapeCell = (value) => `"${String(value).replaceAll('"', '""')}"`;
+    const csv = [
+      ['rank', 'word', 'count', 'cefrLevel'].map(escapeCell).join(','),
+      ...analysis.topVocabulary.map((item, index) => [
+        index + 1,
+        item.word,
+        item.count,
+        item.cefrLevel,
+      ].map(escapeCell).join(',')),
+    ].join('\n');
+
+    try {
+      await navigator.clipboard.writeText(csv);
+      setTopVocabularyCopyStatus('已複製 Top 100 CSV。');
+      trackEvent('top_vocabulary_copy', { count: analysis.topVocabulary.length });
+    } catch {
+      setTopVocabularyCopyStatus('複製失敗。');
+    }
+
+    window.setTimeout(() => setTopVocabularyCopyStatus(''), 1800);
   };
 
   useEffect(() => {
@@ -962,6 +1007,50 @@ export default function App() {
                 </article>
               ))}
             </div>
+          </section>
+        ) : null}
+
+        {showTopVocabulary ? (
+          <section className="top-vocabulary-panel" id="top-vocabulary" data-reveal>
+            <div className="section-title top-vocabulary-panel__heading">
+              <div>
+                <p className="eyebrow">Vocabulary</p>
+                <h2>Top 100 French Vocabulary</h2>
+              </div>
+              <button
+                className="top-vocabulary-panel__copy"
+                type="button"
+                onClick={copyTopVocabulary}
+                disabled={!analysis.topVocabulary.length}
+              >
+                <Copy size={16} />
+                複製 CSV
+              </button>
+            </div>
+            <p className="top-vocabulary-panel__summary">
+              依 normalized word 統計文章高頻詞，已排除 stopwords；目前顯示 {analysis.topVocabulary.length} 個詞。
+            </p>
+            {analysis.topVocabulary.length ? (
+              <div className="top-vocabulary-table" role="table" aria-label="Top 100 French Vocabulary">
+                <div className="top-vocabulary-table__row top-vocabulary-table__row--head" role="row">
+                  <span role="columnheader">#</span>
+                  <span role="columnheader">Word</span>
+                  <span role="columnheader">Count</span>
+                  <span role="columnheader">CEFR</span>
+                </div>
+                {analysis.topVocabulary.map((item, index) => (
+                  <div className="top-vocabulary-table__row" role="row" key={item.word}>
+                    <span role="cell">{index + 1}</span>
+                    <strong role="cell">{item.word}</strong>
+                    <span role="cell">{item.count}</span>
+                    <span role="cell">{item.cefrLevel}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="empty-state">貼上法文文章後，這裡會產生最多 100 個高頻詞。</p>
+            )}
+            {topVocabularyCopyStatus ? <small>{topVocabularyCopyStatus}</small> : null}
           </section>
         ) : null}
 
