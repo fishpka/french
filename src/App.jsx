@@ -369,7 +369,10 @@ function getAutoDictionaryDraft(wordCounts, shapeStats, nlpTokenMap) {
       };
     })
     .filter((entry) => entry.level === 'Unknown')
-    .filter((entry) => !shouldExcludeDictionaryCandidate(entry.word, shapeStats.get(entry.word)))
+    .filter((entry) => !shouldExcludeDictionaryCandidate(
+      entry.normalizedWord,
+      shapeStats.get(entry.normalizedWord),
+    ))
     .sort((a, b) => b.count - a.count || a.word.localeCompare(b.word))
     .slice(0, autoDictionaryLimit)
     .map((entry) => ({
