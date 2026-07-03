@@ -976,6 +976,8 @@ textarea:focus {
 
   .intro,
   .workspace,
+  .top-vocabulary-banner,
+  .top-vocabulary-workspace,
   .analysis-grid,
   .cefr-grid,
   .recommendation-grid,
@@ -1303,6 +1305,85 @@ body {
   font-family: var(--display);
   font-size: 1rem;
   font-weight: 500;
+}
+
+.top-vocabulary-banner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: clamp(22px, 4vw, 52px);
+  align-items: center;
+  margin-top: clamp(48px, 7vw, 78px);
+  padding: clamp(24px, 4vw, 38px) 0;
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+
+.top-vocabulary-banner h2,
+.top-vocabulary-hero h1 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--display);
+  font-weight: 500;
+  letter-spacing: -0.04em;
+}
+
+.top-vocabulary-banner h2 {
+  font-size: clamp(1.7rem, 3.2vw, 3rem);
+}
+
+.top-vocabulary-banner p:not(.eyebrow),
+.top-vocabulary-hero p {
+  max-width: 760px;
+  margin: 14px 0 0;
+  color: var(--ink-muted);
+  line-height: 1.8;
+}
+
+.top-vocabulary-banner__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 18px;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  transition:
+    background-color var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease),
+    transform var(--motion-fast) var(--motion-ease);
+}
+
+.top-vocabulary-banner__link:hover,
+.top-vocabulary-banner__link:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.top-vocabulary-page {
+  padding-top: clamp(48px, 7vw, 82px);
+}
+
+.top-vocabulary-hero {
+  max-width: 980px;
+  margin-bottom: clamp(42px, 7vw, 76px);
+}
+
+.top-vocabulary-hero h1 {
+  max-width: 920px;
+  font-size: clamp(2.35rem, 5vw, 5.15rem);
+  line-height: 1;
+}
+
+.top-vocabulary-workspace {
+  max-width: 920px;
 }
 
 .workspace {
@@ -2472,6 +2553,14 @@ textarea:focus {
     margin-top: 12px;
   }
 
+  .top-vocabulary-banner {
+    align-items: start;
+  }
+
+  .top-vocabulary-banner__link {
+    width: fit-content;
+  }
+
   .analysis-grid {
     margin-top: 54px;
   }
@@ -2542,6 +2631,24 @@ textarea:focus {
   .intro p:not(.eyebrow) {
     font-size: 0.96rem;
     line-height: 1.85;
+  }
+
+  .top-vocabulary-banner {
+    margin-top: 42px;
+    padding: 24px 0;
+  }
+
+  .top-vocabulary-banner h2 {
+    font-size: clamp(1.55rem, 9vw, 2.15rem);
+  }
+
+  .top-vocabulary-banner__link {
+    width: 100%;
+  }
+
+  .top-vocabulary-hero h1 {
+    font-size: clamp(2rem, 10.5vw, 2.55rem);
+    line-height: 1.12;
   }
 
   .visual-strip {

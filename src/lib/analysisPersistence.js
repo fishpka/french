@@ -116,6 +116,26 @@ export async function getAnalysisExportData() {
   return data || [];
 }
 
+export async function getGlobalTopWords(limit = 100) {
+  const client = requireSupabase();
+  const { data, error } = await client.rpc('get_global_top_words', {
+    p_limit: limit,
+  });
+
+  if (error) throw error;
+
+  const excludedGlobalWords = new Set(['donc', 'être', 'pouvoir', 'face', 'celle', 'fin', 'jamais']);
+
+  return (data || [])
+    .filter((item) => !excludedGlobalWords.has(String(item.normalized_word || item.word || '').toLowerCase()))
+    .map((item) => ({
+      word: item.word,
+      normalizedWord: item.normalized_word,
+      count: Number(item.total_count || 0),
+      cefrLevel: item.cefr_level || 'Unknown',
+    }));
+}
+
 export async function deleteAnalysisSession(sessionId) {
   const client = requireSupabase();
   const { error } = await client

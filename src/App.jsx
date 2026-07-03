@@ -1,24 +1,44 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Copy, RefreshCcw } from 'lucide-react';
-import AuthPanel from './components/AuthPanel.jsx';
-import ExportDataPanel from './components/ExportDataPanel.jsx';
-import HistoryDashboard from './components/HistoryDashboard.jsx';
-import MonthlyComparison from './components/MonthlyComparison.jsx';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { ArrowRight, Copy, RefreshCcw } from 'lucide-react';
 import Navbar from './components/Navbar.jsx';
-import SaveAnalysisButton from './components/SaveAnalysisButton.jsx';
-import cefrVocabulary from './data/cefrVocabulary.js';
-import frenchChineseGlosses from './data/frenchChineseGlosses.js';
-import frenchLemmaMap from './data/frenchLemmaMap.js';
-import { getAnalysisHistory } from './lib/analysisPersistence.js';
+import { getAnalysisHistory, getGlobalTopWords } from './lib/analysisPersistence.js';
 import { trackEvent } from './lib/analytics.js';
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient.js';
 
+const AuthPanel = lazy(() => import('./components/AuthPanel.jsx'));
+const ExportDataPanel = lazy(() => import('./components/ExportDataPanel.jsx'));
+const HistoryDashboard = lazy(() => import('./components/HistoryDashboard.jsx'));
+const MonthlyComparison = lazy(() => import('./components/MonthlyComparison.jsx'));
+const SaveAnalysisButton = lazy(() => import('./components/SaveAnalysisButton.jsx'));
+
+let cefrVocabulary = {};
+let frenchChineseGlosses = {};
+let frenchLemmaMap = {};
+let frenchDataModulesPromise;
+
+function loadFrenchDataModules() {
+  if (!frenchDataModulesPromise) {
+    frenchDataModulesPromise = Promise.all([
+      import('./data/cefrVocabulary.js'),
+      import('./data/frenchChineseGlosses.js'),
+      import('./data/frenchLemmaMap.js'),
+    ]).then(([cefrModule, glossModule, lemmaModule]) => {
+      cefrVocabulary = cefrModule.default;
+      frenchChineseGlosses = glossModule.default;
+      frenchLemmaMap = lemmaModule.default;
+    });
+  }
+
+  return frenchDataModulesPromise;
+}
+
 const showTopVocabulary = false;
+const topVocabularyPageQuery = '?page=top-100-mots';
 
 const links = [
   { label: '分析器', href: '#analyzer' },
   { label: '圖表', href: '#charts' },
-  ...(showTopVocabulary ? [{ label: 'Top 100', href: '#top-vocabulary' }] : []),
+  { label: 'Top 100', href: topVocabularyPageQuery },
   { label: 'CEFR', href: '#cefr' },
   { label: '句型', href: '#patterns' },
   { label: '歷史', href: '#history' },
@@ -78,6 +98,12 @@ function createPhraseRegex(pattern) {
   return new RegExp(`(^|[^${frenchLetterClass}])(${pattern})(?=$|[^${frenchLetterClass}])`, 'giu');
 }
 
+function getCurrentPage() {
+  return new URLSearchParams(window.location.search).get('page') === 'top-100-mots'
+    ? 'top-100-mots'
+    : 'home';
+}
+
 function normalizeWord(word) {
   return word.toLowerCase().replace(/[’]/g, "'").replace(/^['-]+|['-]+$/g, '');
 }
@@ -89,6 +115,71 @@ function shouldSkipWord(word) {
     || /^\d+$/.test(normalized)
     || normalized.length <= 1
     || /^[.,!?;:'"«»—…]+$/.test(normalized)
+  );
+}
+
+function TopVocabularyPanel({
+  vocabulary,
+  copyStatus,
+  emptyMessage = '目前還沒有可顯示的高頻詞。',
+  errorMessage = '',
+  isStandalone = false,
+  isLoading = false,
+  summary,
+  onCopy,
+}) {
+  const itemCount = vocabulary.length;
+
+  return (
+    <section
+      className={`top-vocabulary-panel ${isStandalone ? 'top-vocabulary-panel--standalone' : ''}`}
+      id="top-vocabulary"
+      data-reveal
+    >
+      <div className="section-title top-vocabulary-panel__heading">
+        <div>
+          <p className="eyebrow">Vocabulary</p>
+          <h2>Top 100 mots français</h2>
+        </div>
+        <button
+          className="top-vocabulary-panel__copy"
+          type="button"
+          onClick={onCopy}
+          disabled={!itemCount}
+        >
+          <Copy size={16} />
+          複製 CSV
+        </button>
+      </div>
+      <p className="top-vocabulary-panel__summary">
+        {summary || `依全站已儲存分析紀錄彙總 normalized word，排序前 ${itemCount} 個熱門詞。`}
+      </p>
+      {isLoading ? (
+        <p className="empty-state">正在載入全站熱門詞...</p>
+      ) : errorMessage ? (
+        <p className="empty-state">{errorMessage}</p>
+      ) : itemCount ? (
+        <div className="top-vocabulary-table" role="table" aria-label="Top 100 mots français">
+          <div className="top-vocabulary-table__row top-vocabulary-table__row--head" role="row">
+            <span role="columnheader">#</span>
+            <span role="columnheader">Word</span>
+            <span role="columnheader">Count</span>
+            <span role="columnheader">CEFR</span>
+          </div>
+          {vocabulary.map((item, index) => (
+            <div className="top-vocabulary-table__row" role="row" key={item.word}>
+              <span role="cell">{index + 1}</span>
+              <strong role="cell">{item.word}</strong>
+              <span role="cell">{item.count}</span>
+              <span role="cell">{item.cefrLevel}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="empty-state">{emptyMessage}</p>
+      )}
+      {copyStatus ? <small>{copyStatus}</small> : null}
+    </section>
   );
 }
 
@@ -675,16 +766,24 @@ function analyzeText(text, nlpTokenMap = new Map()) {
 
 export default function App() {
   const [text, setText] = useState(sampleText);
+  const [page, setPage] = useState(getCurrentPage);
   const [session, setSession] = useState(null);
   const [history, setHistory] = useState([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [historyRefreshIndex, setHistoryRefreshIndex] = useState(0);
   const [dictionaryCopyStatus, setDictionaryCopyStatus] = useState('');
   const [topVocabularyCopyStatus, setTopVocabularyCopyStatus] = useState('');
+  const [globalTopVocabulary, setGlobalTopVocabulary] = useState([]);
+  const [globalTopVocabularyStatus, setGlobalTopVocabularyStatus] = useState({
+    error: '',
+    loading: false,
+  });
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
+  const [frenchDataVersion, setFrenchDataVersion] = useState(0);
   const [nlpTokens, setNlpTokens] = useState([]);
+  const isTopVocabularyPage = page === 'top-100-mots';
   const nlpTokenMap = useMemo(() => buildNlpTokenMap(nlpTokens), [nlpTokens]);
-  const analysis = useMemo(() => analyzeText(text, nlpTokenMap), [text, nlpTokenMap]);
+  const analysis = useMemo(() => analyzeText(text, nlpTokenMap), [text, nlpTokenMap, frenchDataVersion]);
   const analysisSnapshot = useMemo(() => ({
     totalWords: analysis.words.length,
     contentWords: analysis.contentWords.length,
@@ -707,11 +806,73 @@ export default function App() {
       count,
       cefrLevel: analysis.cefrExcludedWords.has(word) ? 'Excluded' : getCefrLevelForWord(word, nlpTokenMap),
     })),
-  }), [analysis, nlpTokenMap]);
+  }), [analysis, nlpTokenMap, frenchDataVersion]);
   const maxCount = analysis.topWords[0]?.count || 1;
   const cloudWords = analysis.topWords.slice(0, 24);
   const cloudAnimationKey = useMemo(() => getWordCountSignature(cloudWords), [cloudWords]);
   const isAuthenticated = Boolean(session?.user?.id);
+  const navLinks = isTopVocabularyPage
+    ? [
+        { label: '分析器', href: './#analyzer' },
+        { label: 'Top 100', href: topVocabularyPageQuery },
+      ]
+    : links;
+
+  useEffect(() => {
+    const handlePopState = () => setPage(getCurrentPage());
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
+    if (isTopVocabularyPage) return undefined;
+
+    let isActive = true;
+    loadFrenchDataModules().then(() => {
+      if (isActive) setFrenchDataVersion((version) => version + 1);
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, [isTopVocabularyPage]);
+
+  useEffect(() => {
+    if (!isTopVocabularyPage) return undefined;
+
+    if (!isSupabaseConfigured || !supabase) {
+      setGlobalTopVocabulary([]);
+      setGlobalTopVocabularyStatus({
+        error: 'Supabase 尚未設定，因此目前無法載入全站熱門 100 mots。',
+        loading: false,
+      });
+      return undefined;
+    }
+
+    let isActive = true;
+    setGlobalTopVocabularyStatus({ error: '', loading: true });
+
+    getGlobalTopWords(100)
+      .then((words) => {
+        if (isActive) {
+          setGlobalTopVocabulary(words);
+          setGlobalTopVocabularyStatus({ error: '', loading: false });
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setGlobalTopVocabulary([]);
+          setGlobalTopVocabularyStatus({
+            error: '目前無法載入全站熱門詞。請確認 Supabase 已套用 get_global_top_words migration。',
+            loading: false,
+          });
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [isTopVocabularyPage]);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return undefined;
@@ -800,13 +961,13 @@ export default function App() {
     window.setTimeout(() => setDictionaryCopyStatus(''), 1800);
   };
 
-  const copyTopVocabulary = async () => {
-    if (!analysis.topVocabulary.length) return;
+  const copyVocabularyCsv = async (vocabulary, eventName = 'top_vocabulary_copy') => {
+    if (!vocabulary.length) return;
 
     const escapeCell = (value) => `"${String(value).replaceAll('"', '""')}"`;
     const csv = [
       ['rank', 'word', 'count', 'cefrLevel'].map(escapeCell).join(','),
-      ...analysis.topVocabulary.map((item, index) => [
+      ...vocabulary.map((item, index) => [
         index + 1,
         item.word,
         item.count,
@@ -817,13 +978,16 @@ export default function App() {
     try {
       await navigator.clipboard.writeText(csv);
       setTopVocabularyCopyStatus('已複製 Top 100 CSV。');
-      trackEvent('top_vocabulary_copy', { count: analysis.topVocabulary.length });
+      trackEvent(eventName, { count: vocabulary.length });
     } catch {
       setTopVocabularyCopyStatus('複製失敗。');
     }
 
     window.setTimeout(() => setTopVocabularyCopyStatus(''), 1800);
   };
+
+  const copyTopVocabulary = () => copyVocabularyCsv(analysis.topVocabulary, 'top_vocabulary_copy');
+  const copyGlobalTopVocabulary = () => copyVocabularyCsv(globalTopVocabulary, 'global_top_vocabulary_copy');
 
   useEffect(() => {
     const elements = document.querySelectorAll('[data-reveal]');
@@ -849,9 +1013,46 @@ export default function App() {
     return () => observer.disconnect();
   }, []);
 
+  if (isTopVocabularyPage) {
+    return (
+      <>
+        <Navbar brand="French" links={navLinks} />
+        <main className="app-shell top-vocabulary-page" id="home">
+          <section className="top-vocabulary-hero" data-reveal>
+            <p className="eyebrow">Top 100 mots</p>
+            <h1>最常分析的 100 個法文詞。</h1>
+            <p>
+              這裡彙總所有已儲存分析紀錄的 normalized word，依總出現次數排序並標示 CEFR，
+              用來觀察大家最常遇到的法文學習詞。
+            </p>
+          </section>
+
+          <section className="top-vocabulary-workspace" data-reveal>
+            <TopVocabularyPanel
+              vocabulary={globalTopVocabulary}
+              copyStatus={topVocabularyCopyStatus}
+              emptyMessage="目前還沒有全站熱門詞資料。使用者儲存分析後，這裡會開始累積。"
+              errorMessage={globalTopVocabularyStatus.error}
+              isStandalone
+              isLoading={globalTopVocabularyStatus.loading}
+              summary={`依全站已儲存分析紀錄彙總 normalized word；目前顯示 ${globalTopVocabulary.length} 個詞。`}
+              onCopy={copyGlobalTopVocabulary}
+            />
+          </section>
+
+          <footer className="site-footer">
+            <a href="./#analyzer">回到主分析器</a>
+            <span>聯絡信箱</span>
+            <a href="mailto:fishpka@hotmail.com">fishpka@hotmail.com</a>
+          </footer>
+        </main>
+      </>
+    );
+  }
+
   return (
     <>
-      <Navbar brand="French" links={links} />
+      <Navbar brand="French" links={navLinks} />
       <main className="app-shell" id="home">
         <section className="intro" id="analyzer">
           <div className="intro__copy" data-reveal>
@@ -913,18 +1114,38 @@ export default function App() {
               spellCheck="false"
               placeholder="貼上你的法文文章、作文或口說稿..."
             />
-            <SaveAnalysisButton
-              disabled={!analysis.wordCounts.length}
-              session={session}
-              snapshot={analysisSnapshot}
-              onSaved={() => setHistoryRefreshIndex((index) => index + 1)}
-            />
+            <Suspense fallback={null}>
+              <SaveAnalysisButton
+                disabled={!analysis.wordCounts.length}
+                session={session}
+                snapshot={analysisSnapshot}
+                onSaved={() => setHistoryRefreshIndex((index) => index + 1)}
+              />
+            </Suspense>
           </div>
 
           <aside className="summary-panel" id="summary">
-            <AuthPanel session={session} />
-            <ExportDataPanel session={session} />
+            <Suspense fallback={null}>
+              <AuthPanel session={session} />
+              <ExportDataPanel session={session} />
+            </Suspense>
           </aside>
+        </section>
+
+        <section className="top-vocabulary-banner" aria-labelledby="top-vocabulary-banner-title" data-reveal>
+          <div>
+            <p className="eyebrow">Vocabulary list</p>
+            <h2 id="top-vocabulary-banner-title">需要完整 Top 100 mots？</h2>
+            <p>看看大家都在用什麼法文詞？</p>
+          </div>
+          <a
+            className="top-vocabulary-banner__link"
+            href={topVocabularyPageQuery}
+            onClick={() => trackEvent('top_100_banner_click')}
+          >
+            打開 Top 100
+            <ArrowRight size={18} />
+          </a>
         </section>
 
         <section className="analysis-grid" id="charts" data-reveal>
@@ -1014,47 +1235,13 @@ export default function App() {
         ) : null}
 
         {showTopVocabulary ? (
-          <section className="top-vocabulary-panel" id="top-vocabulary" data-reveal>
-            <div className="section-title top-vocabulary-panel__heading">
-              <div>
-                <p className="eyebrow">Vocabulary</p>
-                <h2>Top 100 French Vocabulary</h2>
-              </div>
-              <button
-                className="top-vocabulary-panel__copy"
-                type="button"
-                onClick={copyTopVocabulary}
-                disabled={!analysis.topVocabulary.length}
-              >
-                <Copy size={16} />
-                複製 CSV
-              </button>
-            </div>
-            <p className="top-vocabulary-panel__summary">
-              依 normalized word 統計文章高頻詞，已排除 stopwords；目前顯示 {analysis.topVocabulary.length} 個詞。
-            </p>
-            {analysis.topVocabulary.length ? (
-              <div className="top-vocabulary-table" role="table" aria-label="Top 100 French Vocabulary">
-                <div className="top-vocabulary-table__row top-vocabulary-table__row--head" role="row">
-                  <span role="columnheader">#</span>
-                  <span role="columnheader">Word</span>
-                  <span role="columnheader">Count</span>
-                  <span role="columnheader">CEFR</span>
-                </div>
-                {analysis.topVocabulary.map((item, index) => (
-                  <div className="top-vocabulary-table__row" role="row" key={item.word}>
-                    <span role="cell">{index + 1}</span>
-                    <strong role="cell">{item.word}</strong>
-                    <span role="cell">{item.count}</span>
-                    <span role="cell">{item.cefrLevel}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="empty-state">貼上法文文章後，這裡會產生最多 100 個高頻詞。</p>
-            )}
-            {topVocabularyCopyStatus ? <small>{topVocabularyCopyStatus}</small> : null}
-          </section>
+          <TopVocabularyPanel
+            vocabulary={analysis.topVocabulary}
+            copyStatus={topVocabularyCopyStatus}
+            emptyMessage="貼上法文文章後，這裡會產生最多 100 個高頻詞。"
+            summary={`依 normalized word 統計文章高頻詞，已排除 stopwords；目前顯示 ${analysis.topVocabulary.length} 個詞。`}
+            onCopy={copyTopVocabulary}
+          />
         ) : null}
 
         <section className="cefr-panel" id="cefr" data-reveal>
@@ -1233,19 +1420,21 @@ export default function App() {
           </div>
         </section>
 
-        <HistoryDashboard
-          history={history}
-          isAuthenticated={isAuthenticated}
-          isLoading={isHistoryLoading}
-          onChanged={() => setHistoryRefreshIndex((index) => index + 1)}
-          onRequireAuth={() => setIsAuthPromptOpen(true)}
-        />
+        <Suspense fallback={null}>
+          <HistoryDashboard
+            history={history}
+            isAuthenticated={isAuthenticated}
+            isLoading={isHistoryLoading}
+            onChanged={() => setHistoryRefreshIndex((index) => index + 1)}
+            onRequireAuth={() => setIsAuthPromptOpen(true)}
+          />
 
-        <MonthlyComparison
-          history={history}
-          isAuthenticated={isAuthenticated}
-          onRequireAuth={() => setIsAuthPromptOpen(true)}
-        />
+          <MonthlyComparison
+            history={history}
+            isAuthenticated={isAuthenticated}
+            onRequireAuth={() => setIsAuthPromptOpen(true)}
+          />
+        </Suspense>
 
         <footer className="site-footer">
           <span>聯絡信箱</span>
@@ -1279,7 +1468,9 @@ export default function App() {
                 <li>建立個人單字筆記本</li>
               </ul>
             </div>
-            <AuthPanel session={session} />
+            <Suspense fallback={null}>
+              <AuthPanel session={session} />
+            </Suspense>
           </div>
         </div>
       ) : null}
