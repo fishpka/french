@@ -767,7 +767,7 @@ textarea:focus {
 
 .unknown-review-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 14px;
   margin-bottom: 14px;
 }
@@ -800,6 +800,68 @@ textarea:focus {
   color: #625c52;
   font-size: 0.9rem;
   line-height: 1.65;
+}
+
+.unknown-diagnostics {
+  display: grid;
+  gap: 10px;
+}
+
+.unknown-diagnostic {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(68, 61, 51, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.unknown-diagnostic__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.unknown-diagnostic__heading strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #20231f;
+  font-size: 0.98rem;
+}
+
+.unknown-diagnostic__heading small {
+  flex: 0 0 auto;
+  color: #746b5f;
+  font-weight: 800;
+}
+
+.unknown-diagnostic p {
+  margin: 6px 0 8px;
+  color: #625c52;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.unknown-diagnostic__checks {
+  display: grid;
+  gap: 6px;
+}
+
+.unknown-diagnostic__checks span {
+  display: block;
+  min-width: 0;
+  color: #625c52;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.unknown-diagnostic__checks strong {
+  display: inline-block;
+  margin-right: 6px;
+  color: #20231f;
+  font-size: 0.72rem;
+  font-weight: 850;
 }
 
 .dictionary-builder__meta,
@@ -870,7 +932,7 @@ textarea:focus {
 }
 
 .patterns article {
-  min-height: 280px;
+  min-height: 0;
   padding: 18px;
 }
 
@@ -1806,6 +1868,30 @@ textarea:focus {
   color: var(--ink-muted);
 }
 
+.unknown-diagnostic {
+  border-color: var(--line);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--paper) 78%, transparent);
+}
+
+.unknown-diagnostic__heading strong {
+  color: var(--ink);
+  font-family: var(--display);
+  font-weight: 700;
+}
+
+.unknown-diagnostic__heading small,
+.unknown-diagnostic p,
+.unknown-diagnostic__checks span {
+  color: var(--ink-muted);
+}
+
+.unknown-diagnostic__checks strong {
+  color: var(--accent);
+  font-family: var(--display);
+  font-weight: 700;
+}
+
 .dictionary-builder__meta {
   color: var(--ink-muted);
   font-family: var(--display);
@@ -1930,7 +2016,7 @@ textarea:focus {
 }
 
 .patterns article {
-  min-height: 260px;
+  min-height: 0;
   padding: 0;
 }
 

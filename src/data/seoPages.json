@@ -1,0 +1,37 @@
+{
+  "siteName": "French",
+  "siteUrl": "https://fishpka.github.io",
+  "basePath": "/french/",
+  "defaultLocale": "zh-Hant",
+  "ogImage": "/ogimage.jpg",
+  "pages": [
+    {
+      "id": "home",
+      "path": "/",
+      "title": "French 詞頻分析器｜法文詞頻、CEFR 與句型分析工具",
+      "description": "French 是法文詞頻與 CEFR 詞彙分析工具，可分析法文文章、作文與口說稿，整理高頻詞、重複片語、常見句型、Unknown 詞與詞彙難度。",
+      "keywords": "法文詞頻, 法文 CEFR, 法文分析, French word frequency, 法文作文, 法文學習, 法文片語, 詞頻分析, B1, B2, C1, C2",
+      "changefreq": "weekly",
+      "priority": "1.0",
+      "breadcrumb": [
+        { "name": "French 詞頻分析器", "path": "/" }
+      ],
+      "schemaType": "WebApplication"
+    },
+    {
+      "id": "top-100-mots",
+      "path": "/top-100-mots/",
+      "legacyQuery": "?page=top-100-mots",
+      "title": "Top 100 mots français｜全站法文高頻詞與 CEFR 等級",
+      "description": "查看 French 使用者最常分析的 100 個法文詞，依出現次數排序並標示 CEFR 等級，適合法文學習者追蹤常見詞彙。",
+      "keywords": "Top 100 mots français, 法文高頻詞, 法文常用詞, French vocabulary, CEFR vocabulary, 法文詞彙表",
+      "changefreq": "daily",
+      "priority": "0.8",
+      "breadcrumb": [
+        { "name": "French 詞頻分析器", "path": "/" },
+        { "name": "Top 100 mots français", "path": "/top-100-mots/" }
+      ],
+      "schemaType": "CollectionPage"
+    }
+  ]
+}

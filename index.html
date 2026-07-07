@@ -3,26 +3,29 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>French 詞頻分析器｜法文詞頻、片語與句型分析工具</title>
+    <title>French 詞頻分析器｜法文詞頻、CEFR 與句型分析工具</title>
     <meta
       name="description"
-      content="French 是一個法文詞頻分析網站，可快速分析法文文章、作文與口說稿，整理高頻詞、重複片語、常見句型與詞彙密度。"
+      content="French 是法文詞頻與 CEFR 詞彙分析工具，可分析法文文章、作文與口說稿，整理高頻詞、重複片語、常見句型、Unknown 詞與詞彙難度。"
     />
     <meta
       name="keywords"
-      content="法文詞頻, 法文分析, French word frequency, 法文作文, 法文學習, 法文片語, 詞頻分析, B1, B2, C1"
+      content="法文詞頻, 法文 CEFR, 法文分析, French word frequency, 法文作文, 法文學習, 法文片語, 詞頻分析, B1, B2, C1, C2"
     />
     <meta name="author" content="French" />
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <link rel="preconnect" href="https://cloud.umami.is" />
     <link rel="icon" type="image/svg+xml" href="https://fishpka.github.io/french/favicon.svg" />
     <link rel="canonical" href="https://fishpka.github.io/french/" />
+    <link rel="alternate" hreflang="zh-Hant" href="https://fishpka.github.io/french/" />
+    <link rel="alternate" hreflang="x-default" href="https://fishpka.github.io/french/" />
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="French" />
-    <meta property="og:title" content="French 詞頻分析器｜法文詞頻、片語與句型分析工具" />
+    <meta property="og:title" content="French 詞頻分析器｜法文詞頻、CEFR 與句型分析工具" />
     <meta
       property="og:description"
-      content="貼上法文文章，即時分析高頻詞、重複片語、常見句型與詞彙密度，適合法文作文、口說稿與新聞文本學習。"
+      content="貼上法文文章，即時分析高頻詞、CEFR 難度、重複片語、常見句型與 Unknown 詞彙。"
     />
     <meta property="og:url" content="https://fishpka.github.io/french/" />
     <meta property="og:image" content="https://fishpka.github.io/french/ogimage.jpg" />
@@ -34,10 +37,10 @@
     <meta property="og:locale" content="zh_TW" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="French 詞頻分析器｜法文詞頻、片語與句型分析工具" />
+    <meta name="twitter:title" content="French 詞頻分析器｜法文詞頻、CEFR 與句型分析工具" />
     <meta
       name="twitter:description"
-      content="快速分析法文文章的高頻詞、重複片語、常見句型與詞彙密度。"
+      content="快速分析法文文章的高頻詞、CEFR 難度、重複片語、常見句型與 Unknown 詞彙。"
     />
     <meta name="twitter:image" content="https://fishpka.github.io/french/ogimage.jpg" />
     <meta name="twitter:image:alt" content="French 法文詞頻分析器預覽圖" />
@@ -49,11 +52,16 @@
         "@context": "https://schema.org",
         "@type": "WebApplication",
         "name": "French",
-        "description": "法文詞頻分析網站，可整理法文文章的高頻詞、重複片語、常見句型與詞彙密度。",
+        "description": "法文詞頻與 CEFR 詞彙分析網站，可整理法文文章的高頻詞、重複片語、常見句型、Unknown 詞與詞彙難度。",
         "url": "https://fishpka.github.io/french/",
         "image": "https://fishpka.github.io/french/ogimage.jpg",
         "applicationCategory": "EducationalApplication",
         "operatingSystem": "Any",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
         "inLanguage": ["zh-Hant", "fr"]
       }
     </script>

@@ -2,7 +2,9 @@
   "name": "french",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/generateSeoFiles.mjs && vite build && node scripts/prerenderSeo.mjs",
+    "build:vite": "vite build",
+    "seo:generate": "node scripts/generateSeoFiles.mjs",
     "preview": "vite preview",
     "build:glosses": "node scripts/buildFrenchChineseGlosses.mjs",
     "build:flelex": "node scripts/buildFlelexBeaccoVocabulary.mjs"

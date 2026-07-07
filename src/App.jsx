@@ -4,6 +4,7 @@ import Navbar from './components/Navbar.jsx';
 import { getAnalysisHistory, getGlobalTopWords } from './lib/analysisPersistence.js';
 import { trackEvent } from './lib/analytics.js';
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient.js';
+import { applySeoMetadata, getInternalHref, getPageIdFromLocation } from './seo.js';
 
 const AuthPanel = lazy(() => import('./components/AuthPanel.jsx'));
 const ExportDataPanel = lazy(() => import('./components/ExportDataPanel.jsx'));
@@ -33,12 +34,13 @@ function loadFrenchDataModules() {
 }
 
 const showTopVocabulary = false;
-const topVocabularyPageQuery = '?page=top-100-mots';
+const topVocabularyPagePath = getInternalHref('top-100-mots');
+const homePagePath = getInternalHref('home');
 
 const links = [
   { label: '分析器', href: '#analyzer' },
   { label: '圖表', href: '#charts' },
-  { label: 'Top 100', href: topVocabularyPageQuery },
+  { label: 'Top 100', href: topVocabularyPagePath },
   { label: 'CEFR', href: '#cefr' },
   { label: '句型', href: '#patterns' },
   { label: '歷史', href: '#history' },
@@ -99,9 +101,7 @@ function createPhraseRegex(pattern) {
 }
 
 function getCurrentPage() {
-  return new URLSearchParams(window.location.search).get('page') === 'top-100-mots'
-    ? 'top-100-mots'
-    : 'home';
+  return getPageIdFromLocation(window.location);
 }
 
 function normalizeWord(word) {
@@ -195,6 +195,16 @@ function isKnownLemma(word) {
   return Boolean(getLemmaFromMapping(word) || getCefrVocabularyLevel(word));
 }
 
+function getKnownCandidate(candidates) {
+  return candidates.find((candidate) => candidate && isKnownLemma(candidate)) || '';
+}
+
+function getCandidateLevel(word) {
+  if (!word) return '';
+  const lemma = getLemmaFromMapping(word) || word;
+  return getCefrVocabularyLevel(lemma) || '';
+}
+
 function buildNlpTokenMap(tokens) {
   const map = new Map();
 
@@ -205,6 +215,7 @@ function buildNlpTokenMap(tokens) {
     const lemma = normalizeWord(token.lemma || '');
     const current = map.get(word) || {
       lemma: '',
+      pos: '',
       isProperNoun: false,
     };
 
@@ -212,6 +223,7 @@ function buildNlpTokenMap(tokens) {
       current.lemma = lemma;
     }
 
+    if (token.pos) current.pos = token.pos;
     current.isProperNoun = current.isProperNoun || token.is_proper_noun || token.pos === 'PROPN';
     map.set(word, current);
   });
@@ -530,8 +542,152 @@ function getUnknownReview(wordCounts, cefrExcludedWordCounts, shapeStats, autoDi
     excluded,
     pendingDictionary,
     totalPendingCount,
+    diagnostics: getUnknownDiagnostics(wordCounts, shapeStats, nlpTokenMap),
     json: autoDictionaryDraft.json,
   };
+}
+
+function getNlpTokenInfo(word, nlpTokenMap) {
+  return nlpTokenMap?.get(normalizeWord(word)) || {};
+}
+
+function uniqueCandidates(candidates) {
+  return [...new Set(candidates.filter(Boolean))];
+}
+
+function getVerbLemmaCandidates(word) {
+  const candidates = [];
+
+  if (/ées?$/.test(word)) candidates.push(word.replace(/ées?$/, 'er'));
+  if (/és?$/.test(word)) candidates.push(word.replace(/és?$/, 'er'));
+  if (/(ais|ait|aient|ions|iez)$/.test(word)) {
+    candidates.push(word.replace(/(ais|ait|aient|ions|iez)$/, 'er'));
+    candidates.push(word.replace(/(ais|ait|aient|ions|iez)$/, 'ir'));
+    candidates.push(word.replace(/(ais|ait|aient|ions|iez)$/, 're'));
+  }
+  if (/(erai|eras|era|erons|erez|eront)$/.test(word)) {
+    candidates.push(word.replace(/(erai|eras|era|erons|erez|eront)$/, 'er'));
+  }
+  if (/(irai|iras|ira|irons|irez|iront)$/.test(word)) {
+    candidates.push(word.replace(/(irai|iras|ira|irons|irez|iront)$/, 'ir'));
+  }
+  if (/(rai|ras|ra|rons|rez|ront)$/.test(word)) {
+    candidates.push(word.replace(/(rai|ras|ra|rons|rez|ront)$/, 're'));
+  }
+  if (/(ons|ez|ent|es|e)$/.test(word)) candidates.push(word.replace(/(ons|ez|ent|es|e)$/, 'er'));
+  if (/(is|it|issent|issons|issez)$/.test(word)) candidates.push(word.replace(/(is|it|issent|issons|issez)$/, 'ir'));
+  if (/(u|ue|us|ues)$/.test(word)) candidates.push(word.replace(/(u|ue|us|ues)$/, 're'));
+
+  return uniqueCandidates(candidates).filter((candidate) => candidate !== word && candidate.length >= 3);
+}
+
+function getPluralLemmaCandidates(word) {
+  const candidates = [];
+  if (word.endsWith('aux')) candidates.push(`${word.slice(0, -3)}al`);
+  if (word.endsWith('eaux')) candidates.push(word.slice(0, -1));
+  if (word.length > 3 && word.endsWith('x')) candidates.push(word.slice(0, -1));
+  if (word.length > 3 && word.endsWith('s') && !word.endsWith('ss')) candidates.push(word.slice(0, -1));
+  return uniqueCandidates(candidates).filter((candidate) => candidate !== word && candidate.length >= 3);
+}
+
+function getGenderLemmaCandidates(word) {
+  const candidates = [];
+  if (word.endsWith('euse')) candidates.push(`${word.slice(0, -4)}eur`);
+  if (word.endsWith('trice')) candidates.push(`${word.slice(0, -5)}teur`);
+  if (word.endsWith('ive')) candidates.push(`${word.slice(0, -3)}if`);
+  if (word.endsWith('ère')) candidates.push(`${word.slice(0, -3)}er`);
+  if (word.endsWith('e') && word.length > 4) candidates.push(word.slice(0, -1));
+  if (word.endsWith('ée')) candidates.push(word.slice(0, -1));
+  if (word.endsWith('ées')) candidates.push(word.slice(0, -1), word.slice(0, -2), word.slice(0, -3));
+  if (word.endsWith('es')) candidates.push(word.slice(0, -1), word.slice(0, -2));
+  return uniqueCandidates(candidates).filter((candidate) => candidate !== word && candidate.length >= 3);
+}
+
+function getUnknownDiagnostics(wordCounts, shapeStats, nlpTokenMap) {
+  return wordCounts
+    .map(({ word, count }) => {
+      const normalizedWord = normalizeFrenchWord(word, nlpTokenMap);
+      const nlpToken = getNlpTokenInfo(word, nlpTokenMap);
+      const shape = shapeStats.get(normalizeWord(word)) || shapeStats.get(normalizedWord);
+      const originalLevel = getCefrVocabularyLevel(word);
+      const normalizedLevel = getCefrVocabularyLevel(normalizedWord);
+
+      if (originalLevel || normalizedLevel) return null;
+
+      const nlpLemma = nlpToken.lemma && nlpToken.lemma !== word ? nlpToken.lemma : '';
+      const mappedLemma = getLemmaFromMapping(word) || getLemmaFromMapping(normalizedWord) || '';
+      const verbCandidates = getVerbLemmaCandidates(normalizedWord);
+      const pluralCandidates = getPluralLemmaCandidates(normalizedWord);
+      const genderCandidates = getGenderLemmaCandidates(normalizedWord);
+      const likelyLemma = getKnownCandidate([
+        nlpLemma,
+        mappedLemma,
+        ...verbCandidates,
+        ...pluralCandidates,
+        ...genderCandidates,
+      ]) || nlpLemma || mappedLemma || verbCandidates[0] || pluralCandidates[0] || genderCandidates[0] || normalizedWord;
+      const likelyLevel = getCandidateLevel(likelyLemma);
+      const checks = [];
+
+      if (nlpToken.pos === 'VERB' || nlpToken.pos === 'AUX' || verbCandidates.length) {
+        checks.push({
+          type: '動詞變位',
+          detail: getKnownCandidate(verbCandidates)
+            ? `可能來自 ${getKnownCandidate(verbCandidates)}`
+            : '符合常見動詞詞尾，但字典沒有確認 lemma',
+        });
+      }
+
+      if (pluralCandidates.length) {
+        checks.push({
+          type: '名詞複數',
+          detail: getKnownCandidate(pluralCandidates)
+            ? `單數可能是 ${getKnownCandidate(pluralCandidates)}`
+            : `可能單數：${pluralCandidates.slice(0, 2).join(' / ')}`,
+        });
+      }
+
+      if (genderCandidates.length) {
+        checks.push({
+          type: '陰陽性變化',
+          detail: getKnownCandidate(genderCandidates)
+            ? `基本形可能是 ${getKnownCandidate(genderCandidates)}`
+            : `可能基本形：${genderCandidates.slice(0, 2).join(' / ')}`,
+        });
+      }
+
+      if (word !== normalizeWord(word) || /['’-]/.test(word)) {
+        checks.push({
+          type: '標點/連字',
+          detail: `分析時正規化為 ${normalizeWord(word)}`,
+        });
+      }
+
+      if (nlpToken.isProperNoun || nlpToken.pos === 'PROPN' || shouldExcludeDictionaryCandidate(normalizedWord, shape)) {
+        checks.push({
+          type: '專有名詞',
+          detail: getExcludedReason(shape),
+        });
+      }
+
+      if (!checks.length) {
+        checks.push({
+          type: '字典未收錄',
+          detail: '未找到可靠的變位、複數、性別或標點線索',
+        });
+      }
+
+      return {
+        word,
+        normalizedWord,
+        count,
+        likelyLemma,
+        likelyLevel,
+        checks,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.count - a.count || a.word.localeCompare(b.word));
 }
 
 function getPatternCount(patternMatches, label) {
@@ -813,10 +969,14 @@ export default function App() {
   const isAuthenticated = Boolean(session?.user?.id);
   const navLinks = isTopVocabularyPage
     ? [
-        { label: '分析器', href: './#analyzer' },
-        { label: 'Top 100', href: topVocabularyPageQuery },
+        { label: '分析器', href: `${homePagePath}#analyzer` },
+        { label: 'Top 100', href: topVocabularyPagePath },
       ]
     : links;
+
+  useEffect(() => {
+    applySeoMetadata(page);
+  }, [page]);
 
   useEffect(() => {
     const handlePopState = () => setPage(getCurrentPage());
@@ -1016,7 +1176,7 @@ export default function App() {
   if (isTopVocabularyPage) {
     return (
       <>
-        <Navbar brand="French" links={navLinks} />
+        <Navbar brand="French" brandHref={homePagePath} links={navLinks} />
         <main className="app-shell top-vocabulary-page" id="home">
           <section className="top-vocabulary-hero" data-reveal>
             <p className="eyebrow">Top 100 mots</p>
@@ -1041,7 +1201,8 @@ export default function App() {
           </section>
 
           <footer className="site-footer">
-            <a href="./#analyzer">回到主分析器</a>
+            <a href={`${homePagePath}#analyzer`}>回到主分析器</a>
+            <a href={homePagePath}>French 詞頻分析器</a>
             <span>聯絡信箱</span>
             <a href="mailto:fishpka@hotmail.com">fishpka@hotmail.com</a>
           </footer>
@@ -1052,7 +1213,7 @@ export default function App() {
 
   return (
     <>
-      <Navbar brand="French" links={navLinks} />
+      <Navbar brand="French" brandHref={homePagePath} links={navLinks} />
       <main className="app-shell" id="home">
         <section className="intro" id="analyzer">
           <div className="intro__copy" data-reveal>
@@ -1140,7 +1301,7 @@ export default function App() {
           </div>
           <a
             className="top-vocabulary-banner__link"
-            href={topVocabularyPageQuery}
+            href={topVocabularyPagePath}
             onClick={() => trackEvent('top_100_banner_click')}
           >
             打開 Top 100
@@ -1345,6 +1506,39 @@ export default function App() {
                   )}
                 </article>
                 <article>
+                  <span>Unknown 診斷</span>
+                  <strong>{analysis.unknownReview.diagnostics.length}</strong>
+                  <p>逐一檢查 Unknown 詞是否像動詞變位、複數、陰陽性、標點問題或專有名詞。</p>
+                  {analysis.unknownReview.diagnostics.length ? (
+                    <div className="unknown-diagnostics">
+                      {analysis.unknownReview.diagnostics.map((item) => (
+                        <div className="unknown-diagnostic" key={item.word}>
+                          <div className="unknown-diagnostic__heading">
+                            <strong>{item.word}</strong>
+                            <small>{item.count}</small>
+                          </div>
+                          <p>
+                            Lemma:
+                            {' '}
+                            <strong>{item.likelyLemma}</strong>
+                            {item.likelyLevel ? ` (${item.likelyLevel})` : ''}
+                          </p>
+                          <div className="unknown-diagnostic__checks">
+                            {item.checks.map((check) => (
+                              <span key={`${item.word}-${check.type}`}>
+                                <strong>{check.type}</strong>
+                                {check.detail}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="empty-state">目前沒有 Unknown 詞需要診斷。</p>
+                  )}
+                </article>
+                <article>
                   <span>待補字典</span>
                   <strong>{analysis.unknownReview.totalPendingCount}</strong>
                   <p>這些詞不是明顯專有名詞，也還沒有 CEFR 分級。</p>
@@ -1420,23 +1614,26 @@ export default function App() {
           </div>
         </section>
 
-        <Suspense fallback={null}>
-          <HistoryDashboard
-            history={history}
-            isAuthenticated={isAuthenticated}
-            isLoading={isHistoryLoading}
-            onChanged={() => setHistoryRefreshIndex((index) => index + 1)}
-            onRequireAuth={() => setIsAuthPromptOpen(true)}
-          />
+        {isAuthenticated ? (
+          <Suspense fallback={null}>
+            <HistoryDashboard
+              history={history}
+              isAuthenticated={isAuthenticated}
+              isLoading={isHistoryLoading}
+              onChanged={() => setHistoryRefreshIndex((index) => index + 1)}
+              onRequireAuth={() => setIsAuthPromptOpen(true)}
+            />
 
-          <MonthlyComparison
-            history={history}
-            isAuthenticated={isAuthenticated}
-            onRequireAuth={() => setIsAuthPromptOpen(true)}
-          />
-        </Suspense>
+            <MonthlyComparison
+              history={history}
+              isAuthenticated={isAuthenticated}
+              onRequireAuth={() => setIsAuthPromptOpen(true)}
+            />
+          </Suspense>
+        ) : null}
 
         <footer className="site-footer">
+          <a href={topVocabularyPagePath}>Top 100法文單字</a>
           <span>聯絡信箱</span>
           <a href="mailto:fishpka@hotmail.com">fishpka@hotmail.com</a>
         </footer>

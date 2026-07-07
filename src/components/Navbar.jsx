@@ -1,7 +1,7 @@
 import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
 
-export default function Navbar({ brand, links }) {
+export default function Navbar({ brand, brandHref = '#home', links }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const closeMenu = () => setIsOpen(false);
@@ -9,7 +9,7 @@ export default function Navbar({ brand, links }) {
 
   return (
     <header className="navbar">
-      <a className="navbar__brand" href="#home" onClick={closeMenu}>
+      <a className="navbar__brand" href={brandHref} onClick={closeMenu}>
         <span className="navbar__mark" aria-hidden="true">{mark}</span>
         {brand}
       </a>
