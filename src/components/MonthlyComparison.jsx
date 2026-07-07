@@ -38,9 +38,6 @@ function buildMonthlyRows(history) {
 
   return [...months.values()]
     .map((month) => {
-      const cefrTotal = [...month.cefr.values()].reduce((sum, count) => sum + count, 0);
-      const dominantCefr = [...month.cefr.entries()]
-        .sort((a, b) => b[1] - a[1])[0];
       const topWords = [...month.words.entries()]
         .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
         .slice(0, 6);
@@ -48,9 +45,6 @@ function buildMonthlyRows(history) {
       return {
         ...month,
         averageUniqueWords: month.sessions ? Math.round(month.uniqueWords / month.sessions) : 0,
-        dominantCefr: dominantCefr
-          ? `${dominantCefr[0]} ${cefrTotal ? Math.round((dominantCefr[1] / cefrTotal) * 100) : 0}%`
-          : '無資料',
         topWords,
       };
     })
@@ -61,7 +55,7 @@ export default function MonthlyComparison({ history, isAuthenticated, onRequireA
   const rows = useMemo(() => buildMonthlyRows(history), [history]);
 
   return (
-    <section className="monthly-panel" id="monthly-comparison" data-reveal>
+    <section className="monthly-panel" id="monthly-comparison">
       <div className="section-title">
         <div>
           <p className="eyebrow">Monthly</p>
@@ -82,7 +76,6 @@ export default function MonthlyComparison({ history, isAuthenticated, onRequireA
             <span role="columnheader">分析</span>
             <span role="columnheader">內容詞</span>
             <span role="columnheader">平均不重複詞</span>
-            <span role="columnheader">主要 CEFR</span>
             <span role="columnheader">常用詞</span>
           </div>
           {rows.map((row) => (
@@ -91,7 +84,6 @@ export default function MonthlyComparison({ history, isAuthenticated, onRequireA
               <span role="cell">{row.sessions}</span>
               <span role="cell">{row.contentWords}</span>
               <span role="cell">{row.averageUniqueWords}</span>
-              <span role="cell">{row.dominantCefr}</span>
               <span role="cell">
                 {row.topWords.map(([word, count]) => `${word} ${count}`).join(' · ')}
               </span>

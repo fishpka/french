@@ -2330,6 +2330,7 @@ textarea:focus {
 
 .history-card__heading {
   display: flex;
+  align-items: start;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 16px;
@@ -2343,14 +2344,33 @@ textarea:focus {
   font-weight: 650;
 }
 
+.history-card__actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .history-card__heading button {
   flex: 0 0 auto;
-  width: 36px;
+  width: auto;
   height: 36px;
   min-height: 36px;
+  padding: 0 10px;
   border-color: var(--line);
   background: transparent;
   color: var(--ink-muted);
+}
+
+.history-card__heading button span {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.history-card__heading button:last-child {
+  width: 36px;
+  padding: 0;
 }
 
 .history-card__heading button:hover,
@@ -2414,6 +2434,48 @@ textarea:focus {
   color: var(--accent);
 }
 
+.history-card__details {
+  display: grid;
+  gap: 18px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.history-card__details h3 {
+  margin: 0 0 10px;
+  color: var(--ink-muted);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.history-detail-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.history-detail-list span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.history-detail-list strong {
+  margin-right: 6px;
+  color: var(--ink);
+}
+
+.history-detail-list--words span {
+  flex: 1 1 132px;
+}
+
 .monthly-table {
   display: grid;
   border-top: 1px solid var(--line);
@@ -2422,7 +2484,7 @@ textarea:focus {
 .monthly-table__head,
 .monthly-table__row {
   display: grid;
-  grid-template-columns: 0.85fr 0.52fr 0.7fr 0.9fr 0.78fr minmax(0, 1.5fr);
+  grid-template-columns: 0.85fr 0.52fr 0.7fr 0.9fr minmax(0, 1.8fr);
   gap: 14px;
   align-items: center;
   padding: 14px 0;
