@@ -360,7 +360,7 @@ function getCefrAnalysis(wordCounts, nlpTokenMap) {
     const normalizedWord = normalizeFrenchWord(word, nlpTokenMap);
     const originalLevel = getCefrVocabularyLevel(word);
     const normalizedLevel = getCefrVocabularyLevel(normalizedWord);
-    const level = originalLevel || normalizedLevel || 'Unknown';
+    const level = normalizedLevel || originalLevel || 'Unknown';
     const record = levelMap.get(level);
     record.uniqueWords += 1;
     record.totalCount += count;
@@ -395,7 +395,7 @@ function getTopVocabulary(words, nlpTokenMap) {
 
 function getCefrLevelForWord(word, nlpTokenMap) {
   const normalizedWord = normalizeFrenchWord(word, nlpTokenMap);
-  return getCefrVocabularyLevel(word) || getCefrVocabularyLevel(normalizedWord) || 'Unknown';
+  return getCefrVocabularyLevel(normalizedWord) || getCefrVocabularyLevel(word) || 'Unknown';
 }
 
 function getChineseGlossForWord(word, nlpTokenMap) {
@@ -472,7 +472,7 @@ function getAutoDictionaryDraft(wordCounts, shapeStats, nlpTokenMap) {
         word,
         normalizedWord,
         count,
-        level: originalLevel || normalizedLevel || 'Unknown',
+        level: normalizedLevel || originalLevel || 'Unknown',
       };
     })
     .filter((entry) => entry.level === 'Unknown')

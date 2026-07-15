@@ -125,7 +125,6 @@ const baseCefrVocabulary = {
   sujet: 'A2',
   utile: 'A2',
   utiles: 'A2',
-  utiliser: 'A2',
   vite: 'A2',
   voyage: 'A2',
 
@@ -165,10 +164,8 @@ const baseCefrVocabulary = {
   exprimer: 'B1',
   information: 'B1',
   informations: 'B1',
-  liberté: 'B1',
   langue: 'B1',
   manière: 'B1',
-  objectif: 'B1',
   opinion: 'B1',
   participer: 'B1',
   permettre: 'B1',
@@ -190,7 +187,6 @@ const baseCefrVocabulary = {
   technologie: 'B1',
   trouver: 'B1',
   utiliser: 'B1',
-  valeur: 'B1',
 
   abstraction: 'B2',
   cohérence: 'B2',
@@ -240,10 +236,27 @@ const baseCefrVocabulary = {
   téléologie: 'C2',
 };
 
+const curatedCefrOverrides = {
+  belle: 'A1',
+  bonne: 'A1',
+  conséquence: 'B2',
+  important: 'A2',
+  importante: 'A2',
+  internet: 'A2',
+  liberté: 'B2',
+  objectif: 'B2',
+  permettre: 'B1',
+  relation: 'B1',
+  social: 'B1',
+  utiliser: 'B1',
+  valeur: 'B2',
+};
+
 const cefrVocabulary = {
-  ...baseCefrVocabulary,
-  ...mot2Vocabulary,
   ...flelexBeaccoVocabulary,
+  ...mot2Vocabulary,
+  ...baseCefrVocabulary,
+  ...curatedCefrOverrides,
 };
 
 export default cefrVocabulary;
