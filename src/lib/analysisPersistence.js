@@ -1,5 +1,8 @@
 import { supabase } from './supabaseClient.js';
 
+const maxWordFrequenciesPerSession = 1000;
+const maxAnalysisPayloadBytes = 100000;
+
 function requireSupabase() {
   if (!supabase) {
     throw new Error('Supabase is not configured.');
@@ -13,6 +16,31 @@ function isMissingRpcError(error) {
     error?.code === 'PGRST202'
     || error?.message?.includes('Could not find the function public.save_analysis_session')
   );
+}
+
+function isLocalDevelopment() {
+  const hostname = window.location.hostname;
+  return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '';
+}
+
+function getPayloadByteLength(value) {
+  return new TextEncoder().encode(JSON.stringify(value ?? [])).length;
+}
+
+function validateAnalysisSnapshot(snapshot) {
+  const wordFrequencies = snapshot.wordFrequencies || [];
+
+  if (wordFrequencies.length > maxWordFrequenciesPerSession) {
+    throw new Error(`單次最多可儲存 ${maxWordFrequenciesPerSession} 個詞頻項目。`);
+  }
+
+  const payloadSize = getPayloadByteLength(snapshot.cefrSummary)
+    + getPayloadByteLength(snapshot.topWords)
+    + getPayloadByteLength(wordFrequencies);
+
+  if (payloadSize > maxAnalysisPayloadBytes) {
+    throw new Error('分析結果太大，請縮短文字後再儲存。');
+  }
 }
 
 async function saveAnalysisSessionDirectly(client, userId, snapshot) {
@@ -55,6 +83,7 @@ async function saveAnalysisSessionDirectly(client, userId, snapshot) {
 export async function saveAnalysisSession(userId, snapshot) {
   const client = requireSupabase();
   if (!userId) throw new Error('User is not authenticated.');
+  validateAnalysisSnapshot(snapshot);
 
   const { data: session, error } = await client.rpc('save_analysis_session', {
     p_total_words: snapshot.totalWords,
@@ -67,6 +96,10 @@ export async function saveAnalysisSession(userId, snapshot) {
   });
 
   if (isMissingRpcError(error)) {
+    if (!isLocalDevelopment()) {
+      throw new Error('Save RPC is not installed. Apply the Supabase migrations before enabling persistence.');
+    }
+
     return saveAnalysisSessionDirectly(client, userId, snapshot);
   }
 

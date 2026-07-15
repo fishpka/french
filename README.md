@@ -41,9 +41,12 @@ Configure the frontend:
 
 ```bash
 VITE_FRENCH_NLP_API_URL=http://127.0.0.1:8000
+VITE_FRENCH_NLP_MAX_TEXT_LENGTH=20000
 ```
 
 Without `VITE_FRENCH_NLP_API_URL`, the app keeps using the browser-only fallback rules.
+The optional NLP backend also supports `FRENCH_NLP_API_KEY`, `MAX_TEXT_LENGTH`, `MAX_REQUEST_BYTES`,
+`RATE_LIMIT_REQUESTS`, and `RATE_LIMIT_WINDOW_SECONDS` for server-side access control.
 
 ## FLELex / Beacco CEFR Vocabulary
 

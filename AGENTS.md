@@ -55,6 +55,14 @@ Copy `.env.example` to `.env` when local integrations are needed.
 - `VITE_SUPABASE_URL` - Supabase project URL.
 - `VITE_SUPABASE_ANON_KEY` - Supabase anon key.
 - `VITE_FRENCH_NLP_API_URL` - optional local NLP API origin, for example `http://127.0.0.1:8000`.
+- `VITE_FRENCH_NLP_MAX_TEXT_LENGTH` - maximum characters sent to the optional NLP API.
+
+Backend-only NLP API controls:
+
+- `FRENCH_NLP_API_KEY` - optional API key required by the FastAPI backend.
+- `MAX_TEXT_LENGTH` - maximum text characters accepted by the backend.
+- `MAX_REQUEST_BYTES` - maximum request body size accepted by the backend.
+- `RATE_LIMIT_REQUESTS` and `RATE_LIMIT_WINDOW_SECONDS` - per-client in-memory rate limit.
 
 The app must continue to work without these variables. Supabase and spaCy backend support are optional.
 

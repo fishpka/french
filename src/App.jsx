@@ -89,6 +89,10 @@ const showUnknownReview = false;
 const showCefrExcludedNote = false;
 const showChineseGlosses = false;
 const frenchNlpApiUrl = import.meta.env.VITE_FRENCH_NLP_API_URL?.trim() || '';
+const configuredFrenchNlpMaxTextLength = Number.parseInt(import.meta.env.VITE_FRENCH_NLP_MAX_TEXT_LENGTH || '20000', 10);
+const frenchNlpMaxTextLength = Number.isFinite(configuredFrenchNlpMaxTextLength)
+  ? Math.max(configuredFrenchNlpMaxTextLength, 1)
+  : 20000;
 const frenchLetterClass = 'a-zàâäçéèêëîïôöùûüÿñæœ';
 const sentenceDelimiter = /[.!?。！？\n]+/;
 const advancedCefrLevels = new Set(['B2', 'C1', 'C2']);
@@ -1009,6 +1013,15 @@ export default function App() {
       return undefined;
     }
 
+    if (!session?.user?.id) {
+      setGlobalTopVocabulary([]);
+      setGlobalTopVocabularyStatus({
+        error: '請先登入以載入全站熱門 100 mots。',
+        loading: false,
+      });
+      return undefined;
+    }
+
     let isActive = true;
     setGlobalTopVocabularyStatus({ error: '', loading: true });
 
@@ -1032,7 +1045,7 @@ export default function App() {
     return () => {
       isActive = false;
     };
-  }, [isTopVocabularyPage]);
+  }, [isTopVocabularyPage, session?.user?.id]);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return undefined;
@@ -1055,12 +1068,13 @@ export default function App() {
       return undefined;
     }
 
+    const nlpText = text.slice(0, frenchNlpMaxTextLength);
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => {
       fetch(`${frenchNlpApiUrl.replace(/\/$/, '')}/api/french-tokens`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text: nlpText }),
         signal: controller.signal,
       })
         .then((response) => {
