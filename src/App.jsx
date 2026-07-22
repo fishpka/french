@@ -2,7 +2,12 @@ import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Copy, Lock, RefreshCcw, UserPlus } from 'lucide-react';
 import Navbar from './components/Navbar.jsx';
 import { getAnalysisHistory, getGlobalTopWords } from './lib/analysisPersistence.js';
-import { trackEvent } from './lib/analytics.js';
+import {
+  ANALYTICS_EVENTS,
+  getAnalysisCompletedEventData,
+  getSafeErrorType,
+  trackEvent,
+} from './lib/analytics.js';
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient.js';
 import { applySeoMetadata, getInternalHref, getPageIdFromLocation } from './seo.js';
 
@@ -1189,23 +1194,24 @@ export default function App() {
         if (isActive) {
           setGlobalTopVocabulary(words);
           setGlobalTopVocabularyStatus({ error: '', loading: false });
-          trackEvent(words.length ? 'top100_data_loaded' : 'top100_empty_state', {
+          trackEvent(words.length ? ANALYTICS_EVENTS.TOP100_DATA_LOADED : ANALYTICS_EVENTS.TOP100_EMPTY_STATE, {
             ...top100AnalyticsBase,
             auth_state: 'authenticated',
             word_count: words.length,
           });
         }
       })
-      .catch(() => {
+      .catch((error) => {
         if (isActive) {
           setGlobalTopVocabulary([]);
           setGlobalTopVocabularyStatus({
             error: '目前無法載入全站熱門詞。請稍後再試，或確認資料庫已套用 Top 100 查詢設定。',
             loading: false,
           });
-          trackEvent('top100_load_error', {
+          trackEvent(ANALYTICS_EVENTS.TOP100_LOAD_ERROR, {
             ...top100AnalyticsBase,
             auth_state: 'authenticated',
+            error_type: getSafeErrorType(error),
           });
         }
       });
@@ -1228,7 +1234,7 @@ export default function App() {
       setIsAuthReady(true);
       setHistoryRefreshIndex((index) => index + 1);
       if (event === 'SIGNED_IN' && getCurrentPage() === 'top-100-mots') {
-        trackEvent('top100_auth_success', {
+        trackEvent(ANALYTICS_EVENTS.TOP100_AUTH_SUCCESS, {
           ...top100AnalyticsBase,
           auth_state: 'authenticated',
         });
@@ -1241,11 +1247,11 @@ export default function App() {
   useEffect(() => {
     if (!isTopVocabularyPage || !isAuthReady || isAuthenticated) return;
 
-    trackEvent('top100_logged_out_view', {
+    trackEvent(ANALYTICS_EVENTS.TOP100_LOGGED_OUT_VIEW, {
       ...top100AnalyticsBase,
       auth_state: 'logged_out',
     });
-    trackEvent('top100_preview_view', {
+    trackEvent(ANALYTICS_EVENTS.TOP100_PREVIEW_VIEW, {
       ...top100AnalyticsBase,
       auth_state: 'logged_out',
     });
@@ -1338,10 +1344,38 @@ export default function App() {
     setIsAuthPromptOpen(true);
   };
 
-  const openTop100LoginPrompt = () => openAuthPrompt('preview_primary_cta', 'top100_login_click');
-  const openTop100SignupPrompt = () => openAuthPrompt('preview_secondary_cta', 'top100_signup_click');
+  const openTop100LoginPrompt = () => openAuthPrompt('preview_primary_cta', ANALYTICS_EVENTS.TOP100_LOGIN_CLICK);
+  const openTop100SignupPrompt = () => openAuthPrompt('preview_secondary_cta', ANALYTICS_EVENTS.TOP100_SIGNUP_CLICK);
 
-  const copyVocabularyCsv = async (vocabulary, eventName = 'top_vocabulary_copy') => {
+  const handleAnalysisRequest = () => {
+    const userStatus = isAuthenticated ? 'logged_in' : 'anonymous';
+    trackEvent(ANALYTICS_EVENTS.ANALYSIS_STARTED);
+
+    if (!analysisSnapshot || !analysis.wordCounts.length) {
+      trackEvent(ANALYTICS_EVENTS.ANALYSIS_FAILED, {
+        error_type: 'missing_data',
+        user_status: userStatus,
+      });
+      return false;
+    }
+
+    try {
+      trackEvent(
+        ANALYTICS_EVENTS.ANALYSIS_COMPLETED,
+        getAnalysisCompletedEventData(analysisSnapshot, userStatus),
+      );
+      document.getElementById('charts')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return true;
+    } catch (error) {
+      trackEvent(ANALYTICS_EVENTS.ANALYSIS_FAILED, {
+        error_type: getSafeErrorType(error),
+        user_status: userStatus,
+      });
+      return false;
+    }
+  };
+
+  const copyVocabularyCsv = async (vocabulary, eventName = ANALYTICS_EVENTS.TOP_VOCABULARY_COPY) => {
     if (!vocabulary.length) return;
 
     const escapeCell = (value) => `"${String(value).replaceAll('"', '""')}"`;
@@ -1366,8 +1400,11 @@ export default function App() {
     window.setTimeout(() => setTopVocabularyCopyStatus(''), 1800);
   };
 
-  const copyTopVocabulary = () => copyVocabularyCsv(analysis.topVocabulary, 'top_vocabulary_copy');
-  const copyGlobalTopVocabulary = () => copyVocabularyCsv(globalTopVocabulary, 'global_top_vocabulary_copy');
+  const copyTopVocabulary = () => copyVocabularyCsv(analysis.topVocabulary, ANALYTICS_EVENTS.TOP_VOCABULARY_COPY);
+  const copyGlobalTopVocabulary = () => copyVocabularyCsv(
+    globalTopVocabulary,
+    ANALYTICS_EVENTS.GLOBAL_TOP_VOCABULARY_COPY,
+  );
 
   useEffect(() => {
     const elements = document.querySelectorAll('[data-reveal]');
@@ -1516,7 +1553,7 @@ export default function App() {
                 <h2>文章文本</h2>
               </div>
               <div className="button-row">
-                <button type="button" onClick={() => trackEvent('analyze_click')}>
+                <button type="button" onClick={handleAnalysisRequest}>
                   分析
                 </button>
                 <button type="button" onClick={() => setText(sampleText)}>
@@ -1540,6 +1577,7 @@ export default function App() {
                 disabled={!analysis.wordCounts.length}
                 session={session}
                 snapshot={analysisSnapshot}
+                onAnalyze={handleAnalysisRequest}
                 onSaved={() => setHistoryRefreshIndex((index) => index + 1)}
               />
             </Suspense>
@@ -1562,7 +1600,9 @@ export default function App() {
           <a
             className="top-vocabulary-banner__link"
             href={topVocabularyPagePath}
-            onClick={() => trackEvent('top_100_banner_click')}
+            onClick={() => trackEvent(ANALYTICS_EVENTS.TOP_100_BANNER_CLICK, {
+              page_path: window.location.pathname,
+            })}
           >
             打開 Top 100
             <ArrowRight size={18} />

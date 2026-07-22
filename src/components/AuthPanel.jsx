@@ -1,6 +1,6 @@
 import { LogIn, LogOut, Mail } from 'lucide-react';
 import { useState } from 'react';
-import { trackEvent } from '../lib/analytics.js';
+import { ANALYTICS_EVENTS, trackEvent } from '../lib/analytics.js';
 import { isSupabaseConfigured, supabase } from '../lib/supabaseClient.js';
 
 export default function AuthPanel({ session }) {
@@ -18,9 +18,10 @@ export default function AuthPanel({ session }) {
     setIsLoading(true);
     setStatus('');
 
-    if (mode === 'sign-in') {
-      trackEvent('login_click');
-    }
+    trackEvent(mode === 'sign-up' ? ANALYTICS_EVENTS.SIGNUP_CLICKED : ANALYTICS_EVENTS.LOGIN_CLICKED, {
+      source_section: 'auth_panel',
+      auth_state: 'logged_out',
+    });
 
     try {
       const { error } = mode === 'sign-up'

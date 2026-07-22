@@ -1,7 +1,7 @@
 import { Eye, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { deleteAnalysisSession } from '../lib/analysisPersistence.js';
-import { trackEvent } from '../lib/analytics.js';
+import { ANALYTICS_EVENTS, getRecordRange, trackEvent } from '../lib/analytics.js';
 
 let hasTrackedHistoryView = false;
 
@@ -27,10 +27,13 @@ export default function HistoryDashboard({
   const [openSessionId, setOpenSessionId] = useState('');
 
   useEffect(() => {
-    if (hasTrackedHistoryView) return;
+    if (hasTrackedHistoryView || !isAuthenticated || isLoading) return;
     hasTrackedHistoryView = true;
-    trackEvent('history_view');
-  }, []);
+    trackEvent(ANALYTICS_EVENTS.HISTORY_VIEWED, {
+      user_status: 'logged_in',
+      record_range: getRecordRange(history.length),
+    });
+  }, [history.length, isAuthenticated, isLoading]);
 
   const removeSession = async (sessionId) => {
     setDeletingSessionId(sessionId);
