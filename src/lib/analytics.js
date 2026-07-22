@@ -1,4 +1,4 @@
-export function trackEvent(eventName) {
+export function trackEvent(eventName, properties) {
   if (typeof window === 'undefined') return;
-  window.umami?.track?.(eventName);
+  window.umami?.track?.(eventName, properties);
 }

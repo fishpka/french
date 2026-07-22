@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Copy, RefreshCcw } from 'lucide-react';
+import { ArrowRight, Copy, Lock, RefreshCcw, UserPlus } from 'lucide-react';
 import Navbar from './components/Navbar.jsx';
 import { getAnalysisHistory, getGlobalTopWords } from './lib/analysisPersistence.js';
 import { trackEvent } from './lib/analytics.js';
@@ -46,6 +46,18 @@ const links = [
   { label: '歷史', href: '#history' },
   { label: '月比較', href: '#monthly-comparison' },
   { label: '摘要', href: '#summary' },
+];
+
+const top100AnalyticsBase = {
+  page_path: '/top-100-mots/',
+};
+
+const top100PreviewRows = [
+  { rank: 1, word: 'être', partOfSpeech: 'verbe', cefrLevel: 'A1' },
+  { rank: 2, word: 'avoir', partOfSpeech: 'verbe', cefrLevel: 'A1' },
+  { rank: 3, word: 'faire', partOfSpeech: 'verbe', cefrLevel: 'A1' },
+  { rank: 4, word: 'personne', partOfSpeech: 'nom', cefrLevel: 'A1' },
+  { rank: 5, word: 'temps', partOfSpeech: 'nom', cefrLevel: 'A1' },
 ];
 
 const sampleText = `Aujourd'hui, les réseaux sociaux occupent une place importante dans notre vie quotidienne. Je pense que cette évolution peut être positive, car elle permet aux personnes de communiquer plus rapidement et de partager des informations.
@@ -131,6 +143,7 @@ function TopVocabularyPanel({
   isLoading = false,
   summary,
   onCopy,
+  onRetry,
 }) {
   const itemCount = vocabulary.length;
 
@@ -159,9 +172,26 @@ function TopVocabularyPanel({
         {summary || `依全站已儲存分析紀錄彙總 normalized word，排序前 ${itemCount} 個熱門詞。`}
       </p>
       {isLoading ? (
-        <p className="empty-state">正在載入全站熱門詞...</p>
+        <div
+          className="top-vocabulary-skeleton"
+          aria-busy="true"
+          aria-live="polite"
+          aria-label="正在載入全站熱門詞"
+        >
+          {Array.from({ length: 6 }).map((_, index) => (
+            <span key={index} />
+          ))}
+        </div>
       ) : errorMessage ? (
-        <p className="empty-state">{errorMessage}</p>
+        <div className="top-vocabulary-message" role="alert">
+          <p>{errorMessage}</p>
+          {onRetry ? (
+            <button type="button" onClick={onRetry}>
+              <RefreshCcw size={16} />
+              重新載入
+            </button>
+          ) : null}
+        </div>
       ) : itemCount ? (
         <div className="top-vocabulary-table" role="table" aria-label="Top 100 mots français">
           <div className="top-vocabulary-table__row top-vocabulary-table__row--head" role="row">
@@ -184,6 +214,135 @@ function TopVocabularyPanel({
       )}
       {copyStatus ? <small>{copyStatus}</small> : null}
     </section>
+  );
+}
+
+function TopVocabularyHeroCta({ onLogin }) {
+  return (
+    <button className="top-vocabulary-hero__cta" type="button" onClick={onLogin}>
+      <Lock size={16} />
+      登入並查看 Top 100
+    </button>
+  );
+}
+
+function TopVocabularyLoggedOutPreview({ onLogin, onSignup }) {
+  return (
+    <section
+      className="top-vocabulary-preview"
+      aria-labelledby="top-vocabulary-preview-title"
+      data-reveal
+    >
+      <div className="top-vocabulary-preview__copy">
+        <p className="eyebrow">功能預覽</p>
+        <h2 id="top-vocabulary-preview-title">全站熱門 100 個法文詞</h2>
+        <p>看看學習者在真實文章分析中，最常遇到哪些法文單字。</p>
+        <p>
+          排行榜會將不同詞形標準化，例如 suis、es、sommes 統整至 être，
+          幫助你掌握真正值得優先學習的核心字彙。
+        </p>
+        <p>
+          登入後即可查看完整排行榜、出現次數、CEFR 程度與詞性，
+          並將單字加入自己的收藏。
+        </p>
+      </div>
+
+      <div className="top-vocabulary-preview__table-wrap">
+        <div className="top-vocabulary-preview__table" role="table" aria-label="功能預覽：Top 100 法文詞">
+          <div className="top-vocabulary-preview__row top-vocabulary-preview__row--head" role="row">
+            <span role="columnheader">#</span>
+            <span role="columnheader">Word</span>
+            <span role="columnheader">詞性</span>
+            <span role="columnheader">CEFR</span>
+            <span role="columnheader">Count</span>
+          </div>
+          {top100PreviewRows.map((item) => (
+            <div className="top-vocabulary-preview__row" role="row" key={item.word}>
+              <span role="cell">{item.rank}</span>
+              <strong role="cell">{item.word}</strong>
+              <span role="cell">{item.partOfSpeech}</span>
+              <span role="cell">{item.cefrLevel}</span>
+              <span className="top-vocabulary-preview__locked" role="cell">
+                <Lock size={15} aria-hidden="true" />
+                <span className="sr-only">登入後查看出現次數</span>
+                <span aria-hidden="true">登入後查看</span>
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="top-vocabulary-preview__fade" aria-hidden="true" />
+      </div>
+
+      <div className="top-vocabulary-preview__actions">
+        <button type="button" onClick={onLogin}>
+          <Lock size={16} />
+          免費登入並查看 Top 100
+        </button>
+        <button type="button" onClick={onSignup}>
+          <UserPlus size={16} />
+          還沒有帳號？建立免費帳號
+        </button>
+      </div>
+
+      <p className="top-vocabulary-preview__privacy">
+        <Lock size={15} aria-hidden="true" />
+        僅彙整匿名單字統計，不會公開使用者或文章內容。
+      </p>
+    </section>
+  );
+}
+
+function AuthPromptModal({ session, context = 'history', onClose }) {
+  const isTop100Context = context.startsWith('preview_');
+
+  return (
+    <div className="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+      <div className="auth-modal__backdrop" onClick={onClose} />
+      <div className="auth-modal__panel">
+        <button
+          className="auth-modal__close"
+          type="button"
+          onClick={onClose}
+          aria-label="關閉登入視窗"
+        >
+          ×
+        </button>
+        <div className="auth-modal__intro">
+          <p className="eyebrow">Account</p>
+          <h2 id="auth-modal-title">
+            {isTop100Context ? '登入後查看完整 Top 100' : '登入後使用歷史比較'}
+          </h2>
+          <p>
+            {isTop100Context
+              ? '登入或建立免費帳號後，會回到目前的 Top 100 頁面並載入完整排行榜。'
+              : '分析可以直接使用；只有儲存、查看歷史紀錄、比較每月趨勢時才需要登入。'}
+          </p>
+        </div>
+        <div className="auth-modal__promo">
+          <strong>{isTop100Context ? '登入後即可使用 Top 100：' : '登入後即可追蹤你的法文成長：'}</strong>
+          <ul>
+            {isTop100Context ? (
+              <>
+                <li>查看完整排行榜與出現次數</li>
+                <li>比較 CEFR 程度與詞性</li>
+                <li>將單字加入自己的收藏</li>
+                <li>資料僅來自匿名 normalized word 統計</li>
+              </>
+            ) : (
+              <>
+                <li>保存所有分析紀錄</li>
+                <li>比較每月進步趨勢</li>
+                <li>查看專屬 French Wrapped 年度報告</li>
+                <li>建立個人單字筆記本</li>
+              </>
+            )}
+          </ul>
+        </div>
+        <Suspense fallback={null}>
+          <AuthPanel session={session} />
+        </Suspense>
+      </div>
+    </div>
   );
 }
 
@@ -928,6 +1087,7 @@ export default function App() {
   const [text, setText] = useState(sampleText);
   const [page, setPage] = useState(getCurrentPage);
   const [session, setSession] = useState(null);
+  const [isAuthReady, setIsAuthReady] = useState(!isSupabaseConfigured);
   const [history, setHistory] = useState([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [historyRefreshIndex, setHistoryRefreshIndex] = useState(0);
@@ -939,6 +1099,8 @@ export default function App() {
     loading: false,
   });
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
+  const [authPromptContext, setAuthPromptContext] = useState('history');
+  const [globalTopVocabularyRefreshIndex, setGlobalTopVocabularyRefreshIndex] = useState(0);
   const [frenchDataVersion, setFrenchDataVersion] = useState(0);
   const [nlpTokens, setNlpTokens] = useState([]);
   const isTopVocabularyPage = page === 'top-100-mots';
@@ -1013,12 +1175,9 @@ export default function App() {
       return undefined;
     }
 
-    if (!session?.user?.id) {
+    if (!isAuthReady || !session?.user?.id) {
       setGlobalTopVocabulary([]);
-      setGlobalTopVocabularyStatus({
-        error: '請先登入以載入全站熱門 100 mots。',
-        loading: false,
-      });
+      setGlobalTopVocabularyStatus({ error: '', loading: !isAuthReady });
       return undefined;
     }
 
@@ -1030,14 +1189,23 @@ export default function App() {
         if (isActive) {
           setGlobalTopVocabulary(words);
           setGlobalTopVocabularyStatus({ error: '', loading: false });
+          trackEvent(words.length ? 'top100_data_loaded' : 'top100_empty_state', {
+            ...top100AnalyticsBase,
+            auth_state: 'authenticated',
+            word_count: words.length,
+          });
         }
       })
       .catch(() => {
         if (isActive) {
           setGlobalTopVocabulary([]);
           setGlobalTopVocabularyStatus({
-            error: '目前無法載入全站熱門詞。請確認 Supabase 已套用 get_global_top_words migration。',
+            error: '目前無法載入全站熱門詞。請稍後再試，或確認資料庫已套用 Top 100 查詢設定。',
             loading: false,
+          });
+          trackEvent('top100_load_error', {
+            ...top100AnalyticsBase,
+            auth_state: 'authenticated',
           });
         }
       });
@@ -1045,22 +1213,43 @@ export default function App() {
     return () => {
       isActive = false;
     };
-  }, [isTopVocabularyPage, session?.user?.id]);
+  }, [isTopVocabularyPage, isAuthReady, session?.user?.id, globalTopVocabularyRefreshIndex]);
 
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return undefined;
 
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
+      setIsAuthReady(true);
     });
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
+      setIsAuthReady(true);
       setHistoryRefreshIndex((index) => index + 1);
+      if (event === 'SIGNED_IN' && getCurrentPage() === 'top-100-mots') {
+        trackEvent('top100_auth_success', {
+          ...top100AnalyticsBase,
+          auth_state: 'authenticated',
+        });
+      }
     });
 
     return () => subscription.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!isTopVocabularyPage || !isAuthReady || isAuthenticated) return;
+
+    trackEvent('top100_logged_out_view', {
+      ...top100AnalyticsBase,
+      auth_state: 'logged_out',
+    });
+    trackEvent('top100_preview_view', {
+      ...top100AnalyticsBase,
+      auth_state: 'logged_out',
+    });
+  }, [isTopVocabularyPage, isAuthReady, isAuthenticated]);
 
   useEffect(() => {
     if (!frenchNlpApiUrl || !text.trim()) {
@@ -1135,6 +1324,23 @@ export default function App() {
     window.setTimeout(() => setDictionaryCopyStatus(''), 1800);
   };
 
+  const openAuthPrompt = (sourceSection = 'history', eventName = '') => {
+    if (eventName) {
+      trackEvent(eventName, {
+        ...top100AnalyticsBase,
+        page_path: window.location.pathname || top100AnalyticsBase.page_path,
+        source_section: sourceSection,
+        auth_state: isAuthenticated ? 'authenticated' : 'logged_out',
+      });
+    }
+
+    setAuthPromptContext(sourceSection);
+    setIsAuthPromptOpen(true);
+  };
+
+  const openTop100LoginPrompt = () => openAuthPrompt('preview_primary_cta', 'top100_login_click');
+  const openTop100SignupPrompt = () => openAuthPrompt('preview_secondary_cta', 'top100_signup_click');
+
   const copyVocabularyCsv = async (vocabulary, eventName = 'top_vocabulary_copy') => {
     if (!vocabulary.length) return;
 
@@ -1188,30 +1394,63 @@ export default function App() {
   }, []);
 
   if (isTopVocabularyPage) {
+    const isLoggedOutTop100 = isAuthReady && !isAuthenticated;
+    const top100HeroTitle = isLoggedOutTop100
+      ? '全站熱門 100 個法文詞'
+      : '最常分析的 100 個法文詞。';
+
     return (
       <>
         <Navbar brand="French" brandHref={homePagePath} links={navLinks} />
         <main className="app-shell top-vocabulary-page" id="home">
           <section className="top-vocabulary-hero" data-reveal>
             <p className="eyebrow">Top 100 mots</p>
-            <h1>最常分析的 100 個法文詞。</h1>
-            <p>
-              這裡彙總所有已儲存分析紀錄的 normalized word，依總出現次數排序並標示 CEFR，
-              用來觀察大家最常遇到的法文學習詞。
-            </p>
+            <h1>{top100HeroTitle}</h1>
+            {isLoggedOutTop100 ? (
+              <>
+                <p>看看學習者在真實文章分析中，最常遇到哪些法文單字。</p>
+                <TopVocabularyHeroCta onLogin={openTop100LoginPrompt} />
+              </>
+            ) : (
+              <p>
+                這裡彙總所有已儲存分析紀錄的 normalized word，依總出現次數排序並標示 CEFR，
+                用來觀察大家最常遇到的法文學習詞。
+              </p>
+            )}
           </section>
 
           <section className="top-vocabulary-workspace" data-reveal>
-            <TopVocabularyPanel
-              vocabulary={globalTopVocabulary}
-              copyStatus={topVocabularyCopyStatus}
-              emptyMessage="目前還沒有全站熱門詞資料。使用者儲存分析後，這裡會開始累積。"
-              errorMessage={globalTopVocabularyStatus.error}
-              isStandalone
-              isLoading={globalTopVocabularyStatus.loading}
-              summary={`依全站已儲存分析紀錄彙總 normalized word；目前顯示 ${globalTopVocabulary.length} 個詞。`}
-              onCopy={copyGlobalTopVocabulary}
-            />
+            {!isAuthReady ? (
+              <TopVocabularyPanel
+                vocabulary={[]}
+                copyStatus=""
+                isStandalone
+                isLoading
+                summary="正在確認登入狀態..."
+                onCopy={copyGlobalTopVocabulary}
+              />
+            ) : isLoggedOutTop100 ? (
+              <TopVocabularyLoggedOutPreview
+                onLogin={openTop100LoginPrompt}
+                onSignup={openTop100SignupPrompt}
+              />
+            ) : (
+              <TopVocabularyPanel
+                vocabulary={globalTopVocabulary}
+                copyStatus={topVocabularyCopyStatus}
+                emptyMessage="目前還沒有足夠的分析紀錄，完成更多文章分析後，排行榜將顯示於此。"
+                errorMessage={globalTopVocabularyStatus.error}
+                isStandalone
+                isLoading={globalTopVocabularyStatus.loading}
+                summary={globalTopVocabularyStatus.error
+                  ? '全站熱門詞需要登入並連線至已設定的 Supabase 資料庫後才能載入。'
+                  : globalTopVocabulary.length
+                    ? `依全站已儲存分析紀錄彙總 normalized word；目前顯示 ${globalTopVocabulary.length} 個詞。`
+                    : '依全站已儲存分析紀錄彙總 normalized word，累積足夠資料後會顯示排行榜。'}
+                onCopy={copyGlobalTopVocabulary}
+                onRetry={() => setGlobalTopVocabularyRefreshIndex((index) => index + 1)}
+              />
+            )}
           </section>
 
           <footer className="site-footer">
@@ -1221,6 +1460,13 @@ export default function App() {
             <a href="mailto:fishpka@hotmail.com">fishpka@hotmail.com</a>
           </footer>
         </main>
+        {isAuthPromptOpen && !session?.user?.id ? (
+          <AuthPromptModal
+            session={session}
+            context={authPromptContext}
+            onClose={() => setIsAuthPromptOpen(false)}
+          />
+        ) : null}
       </>
     );
   }
@@ -1635,13 +1881,13 @@ export default function App() {
               isAuthenticated={isAuthenticated}
               isLoading={isHistoryLoading}
               onChanged={() => setHistoryRefreshIndex((index) => index + 1)}
-              onRequireAuth={() => setIsAuthPromptOpen(true)}
+              onRequireAuth={() => openAuthPrompt('history')}
             />
 
             <MonthlyComparison
               history={history}
               isAuthenticated={isAuthenticated}
-              onRequireAuth={() => setIsAuthPromptOpen(true)}
+              onRequireAuth={() => openAuthPrompt('monthly_comparison')}
             />
           </Suspense>
         ) : null}
@@ -1654,36 +1900,11 @@ export default function App() {
       </main>
 
       {isAuthPromptOpen && !session?.user?.id ? (
-        <div className="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
-          <div className="auth-modal__backdrop" onClick={() => setIsAuthPromptOpen(false)} />
-          <div className="auth-modal__panel">
-            <button
-              className="auth-modal__close"
-              type="button"
-              onClick={() => setIsAuthPromptOpen(false)}
-              aria-label="關閉登入視窗"
-            >
-              ×
-            </button>
-            <div className="auth-modal__intro">
-              <p className="eyebrow">Account</p>
-              <h2 id="auth-modal-title">登入後使用歷史比較</h2>
-              <p>分析可以直接使用；只有儲存、查看歷史紀錄、比較每月趨勢時才需要登入。</p>
-            </div>
-            <div className="auth-modal__promo">
-              <strong>登入後即可追蹤你的法文成長：</strong>
-              <ul>
-                <li>保存所有分析紀錄</li>
-                <li>比較每月進步趨勢</li>
-                <li>查看專屬 French Wrapped 年度報告</li>
-                <li>建立個人單字筆記本</li>
-              </ul>
-            </div>
-            <Suspense fallback={null}>
-              <AuthPanel session={session} />
-            </Suspense>
-          </div>
-        </div>
+        <AuthPromptModal
+          session={session}
+          context={authPromptContext}
+          onClose={() => setIsAuthPromptOpen(false)}
+        />
       ) : null}
     </>
   );
