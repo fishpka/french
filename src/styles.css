@@ -137,8 +137,8 @@ a {
 
 .navbar__nav .navbar__cta:hover,
 .navbar__nav .navbar__cta:focus-visible {
-  background: #2f6b5f;
-  border-color: #2f6b5f;
+  background: #4d7c0f;
+  border-color: #4d7c0f;
   color: #fffaf1;
 }
 
@@ -160,7 +160,7 @@ a {
 
 .navbar__toggle:hover,
 .navbar__toggle:focus-visible {
-  border-color: rgba(47, 107, 95, 0.52);
+  border-color: rgba(77, 124, 15, 0.52);
   background: #e9e2d5;
   outline: none;
 }
@@ -289,7 +289,7 @@ a {
 }
 
 .visual-strip span:nth-child(2n) {
-  background: #2f6b5f;
+  background: #4d7c0f;
 }
 
 .visual-strip span:nth-child(3n) {
@@ -359,7 +359,7 @@ a {
 
 .button-row button:hover,
 .button-row button:focus-visible {
-  border-color: rgba(47, 107, 95, 0.45);
+  border-color: rgba(77, 124, 15, 0.45);
   background: #e9e2d5;
   transform: translateY(-1px);
   outline: none;
@@ -380,8 +380,8 @@ textarea {
 }
 
 textarea:focus {
-  border-color: #2f6b5f;
-  box-shadow: 0 0 0 3px rgba(47, 107, 95, 0.12);
+  border-color: #4d7c0f;
+  box-shadow: 0 0 0 3px rgba(77, 124, 15, 0.12);
 }
 
 .metric-grid {
@@ -398,7 +398,7 @@ textarea:focus {
 }
 
 .metric-grid svg {
-  color: #2f6b5f;
+  color: #4d7c0f;
 }
 
 .metric-grid span,
@@ -471,7 +471,7 @@ textarea:focus {
 .bar-track div {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #2f6b5f, #c7563f);
+  background: linear-gradient(90deg, #4d7c0f, #c7563f);
   transition: width 360ms var(--motion-ease);
 }
 
@@ -492,7 +492,7 @@ textarea:focus {
 }
 
 .word-cloud span {
-  color: #2f6b5f;
+  color: #4d7c0f;
   font-size: var(--size);
   font-weight: 820;
   line-height: 1;
@@ -562,7 +562,7 @@ textarea:focus {
   width: fit-content;
   padding: 4px 7px;
   border-radius: 999px;
-  background: #2f6b5f;
+  background: #4d7c0f;
   color: #fffaf1;
   font-size: 0.68rem;
   font-weight: 850;
@@ -656,7 +656,7 @@ textarea:focus {
 .cefr-meter div {
   height: 100%;
   border-radius: inherit;
-  background: #2f6b5f;
+  background: #4d7c0f;
   transition: width 360ms var(--motion-ease);
 }
 
@@ -3184,7 +3184,7 @@ textarea:focus {
   --accent-strong: #92400e;
   --success: #4d7c0f;
   --warning: #b95d2b;
-  --danger: #b42318;
+  --danger: #4d7c0f;
   --surface-tint: #fff4e6;
   --display: "Noto Sans TC", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--ink);
@@ -3335,9 +3335,9 @@ input:focus-visible {
   width: fit-content;
   margin-bottom: 18px;
   padding: 6px 8px;
-  border: 1px solid rgba(180, 83, 9, 0.16);
+  border: 0;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.78);
+  background: transparent;
 }
 
 .intro__meta p {
@@ -3410,18 +3410,18 @@ input:focus-visible {
   min-height: var(--height);
   border: 1px solid rgba(180, 83, 9, 0.12);
   border-radius: 8px;
-  background: linear-gradient(180deg, #fed7aa, #fff7ed);
+  background: #fff2df;
   color: #9a3412;
   box-shadow: none;
 }
 
 .visual-strip span:nth-child(2n) {
-  background: linear-gradient(180deg, #fde68a, #fffbeb);
+  background: #fff0b8;
   color: #4d7c0f;
 }
 
 .visual-strip span:nth-child(3n) {
-  background: linear-gradient(180deg, #fecaca, #fff7ed);
+  background: #edf7d8;
   color: #b95d2b;
 }
 
@@ -3651,10 +3651,10 @@ textarea:focus {
 .word-cloud span[style*="--tone: 2"],
 .word-cloud span[style*="--tone: 3"],
 .word-cloud span[style*="--tone: 4"] {
-  padding: 6px 8px;
-  border: 1px solid rgba(74, 44, 28, 0.1);
-  border-radius: 8px;
-  background: #fffaf4;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--ink);
   font-weight: 720;
 }
