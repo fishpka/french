@@ -1527,13 +1527,33 @@ export default function App() {
               並抓出常用論述句型。
             </p>
           </div>
-          <div className="visual-strip" aria-label="Analysis preview" data-reveal>
-            <p className="visual-strip__label">Live frequency</p>
-            {analysis.topWords.slice(0, 8).map((item, index) => (
-              <span key={item.word} style={{ '--height': `${34 + index * 7}px`, '--index': index }}>
-                {item.word}
-              </span>
-            ))}
+          <div className="visual-strip visual-strip--illustration" aria-label="法文分析工作區插畫" data-reveal>
+            <div className="visual-illustration__window" aria-hidden="true">
+              <div className="visual-illustration__toolbar">
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="visual-illustration__content">
+                <div className="visual-illustration__document">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <div className="visual-illustration__cards">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <div className="visual-illustration__chart">
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
