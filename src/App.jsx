@@ -308,11 +308,11 @@ function TopVocabularyLoggedOutPreview({ onLogin, onSignup, isSaved, onToggleSav
           <div className="top-vocabulary-preview__row top-vocabulary-preview__row--head" role="row">
             <span role="columnheader">#</span>
             <span role="columnheader">Word</span>
-              <span role="columnheader">詞性</span>
-              <span role="columnheader">CEFR</span>
-              <span role="columnheader">Count</span>
-              {canSaveWords ? <span role="columnheader">收藏</span> : null}
-            </div>
+            <span role="columnheader">詞性</span>
+            <span role="columnheader">CEFR</span>
+            <span role="columnheader">Count</span>
+            {canSaveWords ? <span role="columnheader">收藏</span> : null}
+          </div>
           {top100PreviewRows.map((item) => {
             const savedWordData = {
               word: item.word,
@@ -1582,10 +1582,17 @@ export default function App() {
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return undefined;
 
-    supabase.auth.getSession().then(({ data }) => {
+    let isActive = true;
+
+    const refreshSupabaseSession = () => supabase.auth.getSession().then(({ data }) => {
+      if (!isActive) return;
       setSession(data.session);
       setIsAuthReady(true);
+    }).catch(() => {
+      if (isActive) setIsAuthReady(true);
     });
+
+    refreshSupabaseSession();
 
     const { data: subscription } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession);
@@ -1599,8 +1606,39 @@ export default function App() {
       }
     });
 
-    return () => subscription.subscription.unsubscribe();
+    return () => {
+      isActive = false;
+      subscription.subscription.unsubscribe();
+    };
   }, []);
+
+  useEffect(() => {
+    if (!isTopVocabularyPage || !isSupabaseConfigured || !supabase) return undefined;
+
+    let isActive = true;
+
+    const refreshTopVocabularySession = () => {
+      supabase.auth.getSession()
+        .then(({ data }) => {
+          if (!isActive) return;
+          setSession(data.session);
+          setIsAuthReady(true);
+        })
+        .catch(() => {
+          if (isActive) setIsAuthReady(true);
+        });
+    };
+
+    refreshTopVocabularySession();
+    window.addEventListener('focus', refreshTopVocabularySession);
+    document.addEventListener('visibilitychange', refreshTopVocabularySession);
+
+    return () => {
+      isActive = false;
+      window.removeEventListener('focus', refreshTopVocabularySession);
+      document.removeEventListener('visibilitychange', refreshTopVocabularySession);
+    };
+  }, [isTopVocabularyPage]);
 
   useEffect(() => {
     if (!isTopVocabularyPage || !isAuthReady || isAuthenticated) return;
