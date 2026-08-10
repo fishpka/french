@@ -4764,6 +4764,15 @@ textarea:focus {
   flex: 0 0 auto;
 }
 
+.top-vocabulary-table__row--with-save {
+  grid-template-columns: 48px minmax(0, 1fr) 72px 72px minmax(104px, auto);
+}
+
+.top-vocabulary-table__row--with-save > span:last-child {
+  display: flex;
+  justify-content: flex-end;
+}
+
 @media (max-width: 900px) {
   .bar-row {
     grid-template-columns: minmax(0, 1fr) 56px;
@@ -4772,5 +4781,15 @@ textarea:focus {
   .bar-row__word,
   .bar-row .saved-word-button {
     grid-column: 1 / -1;
+  }
+
+  .top-vocabulary-table__row--with-save {
+    grid-template-columns: 34px minmax(0, 1fr) 58px 62px;
+  }
+
+  .top-vocabulary-table__row--with-save > span:last-child {
+    grid-column: 2 / -1;
+    justify-content: flex-start;
+    padding-bottom: 8px;
   }
 }

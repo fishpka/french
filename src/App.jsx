@@ -165,8 +165,11 @@ function TopVocabularyPanel({
   summary,
   onCopy,
   onRetry,
+  isSaved,
+  onToggleSavedWord,
 }) {
   const itemCount = vocabulary.length;
+  const canSaveWords = Boolean(isSaved && onToggleSavedWord);
 
   return (
     <section
@@ -220,14 +223,41 @@ function TopVocabularyPanel({
             <span role="columnheader">Word</span>
             <span role="columnheader">Count</span>
             <span role="columnheader">CEFR</span>
+            {canSaveWords ? <span role="columnheader">收藏</span> : null}
           </div>
           {vocabulary.map((item, index) => (
-            <div className="top-vocabulary-table__row" role="row" key={item.word}>
-              <span role="cell">{index + 1}</span>
-              <strong role="cell">{item.word}</strong>
-              <span role="cell">{item.count}</span>
-              <span role="cell">{item.cefrLevel}</span>
-            </div>
+            (() => {
+              const savedWordData = {
+                word: item.word,
+                lemma: item.normalizedWord || item.word,
+                cefr: item.cefr || item.cefrLevel || 'Unknown',
+                pos: item.pos || item.partOfSpeech,
+                count: item.count,
+                translation: item.translation,
+              };
+              return (
+                <div
+                  className={`top-vocabulary-table__row ${canSaveWords ? 'top-vocabulary-table__row--with-save' : ''}`}
+                  role="row"
+                  key={item.word}
+                >
+                  <span role="cell">{index + 1}</span>
+                  <strong role="cell">{item.word}</strong>
+                  <span role="cell">{item.count}</span>
+                  <span role="cell">{item.cefrLevel}</span>
+                  {canSaveWords ? (
+                    <span role="cell">
+                      <SavedWordButton
+                        wordData={savedWordData}
+                        isSaved={isSaved(savedWordData)}
+                        onToggle={onToggleSavedWord}
+                        compact
+                      />
+                    </span>
+                  ) : null}
+                </div>
+              );
+            })()
           ))}
         </div>
       ) : (
@@ -1788,6 +1818,8 @@ export default function App() {
                 isLoading
                 summary="正在確認登入狀態..."
                 onCopy={copyGlobalTopVocabulary}
+                isSaved={isSaved}
+                onToggleSavedWord={handleToggleSavedWord}
               />
             ) : isLoggedOutTop100 ? (
               <TopVocabularyLoggedOutPreview
@@ -1809,6 +1841,8 @@ export default function App() {
                     : '依全站已儲存分析紀錄彙總 normalized word，累積足夠資料後會顯示排行榜。'}
                 onCopy={copyGlobalTopVocabulary}
                 onRetry={() => setGlobalTopVocabularyRefreshIndex((index) => index + 1)}
+                isSaved={isSaved}
+                onToggleSavedWord={handleToggleSavedWord}
               />
             )}
           </section>
@@ -2066,6 +2100,8 @@ export default function App() {
             emptyMessage="貼上法文文章後，這裡會產生最多 100 個高頻詞。"
             summary={`依 normalized word 統計文章高頻詞，已排除 stopwords；目前顯示 ${analysis.topVocabulary.length} 個詞。`}
             onCopy={copyTopVocabulary}
+            isSaved={isSaved}
+            onToggleSavedWord={handleToggleSavedWord}
           />
         ) : null}
 

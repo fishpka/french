@@ -148,7 +148,14 @@ function prioritizeStylesheets(html) {
     output = output.replace(link, '');
   });
 
-  const insertion = stylesheetLinks.map((link) => link.trim()).join('\n    ');
+  const insertion = stylesheetLinks
+    .map((link) => {
+      const trimmed = link.trim();
+      return trimmed.includes('onload=')
+        ? trimmed
+        : trimmed.replace(/>$/, ' onload="window.__markAppCssReady?.()">');
+    })
+    .join('\n    ');
   return output.replace(/(\s*<script\s+type="module")/, `\n    ${insertion}\n$1`);
 }
 

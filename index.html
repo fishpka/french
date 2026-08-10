@@ -19,6 +19,13 @@
     <link rel="canonical" href="https://fishpka.github.io/french/" />
     <link rel="alternate" hreflang="zh-Hant" href="https://fishpka.github.io/french/" />
     <link rel="alternate" hreflang="x-default" href="https://fishpka.github.io/french/" />
+    <script>
+      document.documentElement.classList.add('app-css-pending');
+      window.__markAppCssReady = function () {
+        document.documentElement.classList.remove('app-css-pending');
+        document.documentElement.classList.add('app-css-ready');
+      };
+    </script>
     <style id="critical-css">
       :root {
         color: #20231f;
@@ -41,6 +48,21 @@
           linear-gradient(90deg, rgba(32, 35, 31, 0.04) 1px, transparent 1px),
           #f6f2e9;
         background-size: 40px 40px;
+      }
+
+      html.app-css-pending #root {
+        opacity: 0;
+      }
+
+      html.app-css-ready #root {
+        opacity: 1;
+        transition: opacity 160ms ease-out;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html.app-css-ready #root {
+          transition: none;
+        }
       }
 
       a {
