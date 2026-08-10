@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Copy, Heart, Lock, RefreshCcw, Trash2, UserPlus } from 'lucide-react';
 import Navbar from './components/Navbar.jsx';
 import { getAnalysisHistory, getGlobalTopWords } from './lib/analysisPersistence.js';
@@ -218,7 +218,10 @@ function TopVocabularyPanel({
         </div>
       ) : itemCount ? (
         <div className="top-vocabulary-table" role="table" aria-label="Top 100 mots français">
-          <div className="top-vocabulary-table__row top-vocabulary-table__row--head" role="row">
+          <div
+            className={`top-vocabulary-table__row top-vocabulary-table__row--head ${canSaveWords ? 'top-vocabulary-table__row--with-save' : ''}`}
+            role="row"
+          >
             <span role="columnheader">#</span>
             <span role="columnheader">Word</span>
             <span role="columnheader">Count</span>
@@ -277,7 +280,9 @@ function TopVocabularyHeroCta({ onLogin }) {
   );
 }
 
-function TopVocabularyLoggedOutPreview({ onLogin, onSignup }) {
+function TopVocabularyLoggedOutPreview({ onLogin, onSignup, isSaved, onToggleSavedWord }) {
+  const canSaveWords = Boolean(isSaved && onToggleSavedWord);
+
   return (
     <section
       className="top-vocabulary-preview"
@@ -303,23 +308,46 @@ function TopVocabularyLoggedOutPreview({ onLogin, onSignup }) {
           <div className="top-vocabulary-preview__row top-vocabulary-preview__row--head" role="row">
             <span role="columnheader">#</span>
             <span role="columnheader">Word</span>
-            <span role="columnheader">詞性</span>
-            <span role="columnheader">CEFR</span>
-            <span role="columnheader">Count</span>
-          </div>
-          {top100PreviewRows.map((item) => (
-            <div className="top-vocabulary-preview__row" role="row" key={item.word}>
-              <span role="cell">{item.rank}</span>
-              <strong role="cell">{item.word}</strong>
-              <span role="cell">{item.partOfSpeech}</span>
-              <span role="cell">{item.cefrLevel}</span>
-              <span className="top-vocabulary-preview__locked" role="cell">
-                <Lock size={15} aria-hidden="true" />
-                <span className="sr-only">登入後查看出現次數</span>
-                <span aria-hidden="true">登入後查看</span>
-              </span>
+              <span role="columnheader">詞性</span>
+              <span role="columnheader">CEFR</span>
+              <span role="columnheader">Count</span>
+              {canSaveWords ? <span role="columnheader">收藏</span> : null}
             </div>
-          ))}
+          {top100PreviewRows.map((item) => {
+            const savedWordData = {
+              word: item.word,
+              lemma: item.word,
+              cefr: item.cefrLevel,
+              pos: item.partOfSpeech,
+            };
+            return (
+              <div
+                className={`top-vocabulary-preview__row ${canSaveWords ? 'top-vocabulary-preview__row--with-save' : ''}`}
+                role="row"
+                key={item.word}
+              >
+                <span role="cell">{item.rank}</span>
+                <strong role="cell">{item.word}</strong>
+                <span role="cell">{item.partOfSpeech}</span>
+                <span role="cell">{item.cefrLevel}</span>
+                <span className="top-vocabulary-preview__locked" role="cell">
+                  <Lock size={15} aria-hidden="true" />
+                  <span className="sr-only">登入後查看出現次數</span>
+                  <span aria-hidden="true">登入後查看</span>
+                </span>
+                {canSaveWords ? (
+                  <span role="cell">
+                    <SavedWordButton
+                      wordData={savedWordData}
+                      isSaved={isSaved(savedWordData)}
+                      onToggle={onToggleSavedWord}
+                      compact
+                    />
+                  </span>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
         <div className="top-vocabulary-preview__fade" aria-hidden="true" />
       </div>
@@ -1464,6 +1492,10 @@ export default function App() {
         ...links.slice(3),
       ];
 
+  useLayoutEffect(() => {
+    window.__markAppMounted?.();
+  }, []);
+
   useEffect(() => {
     applySeoMetadata(page);
   }, [page]);
@@ -1825,6 +1857,8 @@ export default function App() {
               <TopVocabularyLoggedOutPreview
                 onLogin={openTop100LoginPrompt}
                 onSignup={openTop100SignupPrompt}
+                isSaved={isSaved}
+                onToggleSavedWord={handleToggleSavedWord}
               />
             ) : (
               <TopVocabularyPanel

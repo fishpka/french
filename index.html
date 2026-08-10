@@ -20,10 +20,21 @@
     <link rel="alternate" hreflang="zh-Hant" href="https://fishpka.github.io/french/" />
     <link rel="alternate" hreflang="x-default" href="https://fishpka.github.io/french/" />
     <script>
-      document.documentElement.classList.add('app-css-pending');
+      document.documentElement.classList.add('app-loading');
+      window.__appCssReady = false;
+      window.__appMounted = false;
+      window.__revealAppWhenReady = function () {
+        if (!window.__appCssReady || !window.__appMounted) return;
+        document.documentElement.classList.remove('app-loading');
+        document.documentElement.classList.add('app-ready');
+      };
       window.__markAppCssReady = function () {
-        document.documentElement.classList.remove('app-css-pending');
-        document.documentElement.classList.add('app-css-ready');
+        window.__appCssReady = true;
+        window.__revealAppWhenReady();
+      };
+      window.__markAppMounted = function () {
+        window.__appMounted = true;
+        window.__revealAppWhenReady();
       };
     </script>
     <style id="critical-css">
@@ -50,17 +61,17 @@
         background-size: 40px 40px;
       }
 
-      html.app-css-pending #root {
+      html.app-loading #root {
         opacity: 0;
       }
 
-      html.app-css-ready #root {
+      html.app-ready #root {
         opacity: 1;
         transition: opacity 160ms ease-out;
       }
 
       @media (prefers-reduced-motion: reduce) {
-        html.app-css-ready #root {
+        html.app-ready #root {
           transition: none;
         }
       }
