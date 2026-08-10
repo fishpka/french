@@ -44,7 +44,7 @@ export function buildPageSchema(config, page) {
     description: page.description,
     url: getAbsoluteUrl(config, page),
     image: getAssetUrl(config, config.ogImage),
-    inLanguage: [config.defaultLocale, 'fr'],
+    inLanguage: config.defaultLocale,
   };
 
   if (page.schemaType === 'WebApplication') {
@@ -57,6 +57,7 @@ export function buildPageSchema(config, page) {
         price: '0',
         priceCurrency: 'USD',
       },
+      featureList: page.content?.benefits || undefined,
     };
   }
 
@@ -79,6 +80,24 @@ export function buildBreadcrumbSchema(config, page) {
       position: index + 1,
       name: item.name,
       item: getAbsoluteUrl(config, item.path),
+    })),
+  };
+}
+
+export function buildFaqSchema(page) {
+  const faqs = page.content?.faqs || [];
+  if (!faqs.length) return null;
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
     })),
   };
 }

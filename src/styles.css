@@ -985,6 +985,137 @@ textarea:focus {
   line-height: 1.7;
 }
 
+.seo-landing-page,
+.seo-static-page {
+  display: grid;
+  gap: 28px;
+}
+
+.seo-landing-hero,
+.seo-static-hero {
+  display: grid;
+  gap: 18px;
+  max-width: 900px;
+  padding: clamp(58px, 9vw, 112px) 0 22px;
+}
+
+.seo-landing-hero h1,
+.seo-static-hero h1 {
+  max-width: 760px;
+  margin: 0;
+  color: #20231f;
+  font-size: clamp(2.7rem, 8vw, 6.6rem);
+  line-height: 0.92;
+  letter-spacing: 0;
+}
+
+.seo-landing-hero p,
+.seo-static-hero p {
+  max-width: 720px;
+  margin: 0;
+  color: #514c44;
+  font-size: clamp(1rem, 2vw, 1.22rem);
+  line-height: 1.8;
+}
+
+.seo-landing-cta,
+.seo-static-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: fit-content;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid #253428;
+  border-radius: 7px;
+  background: #253428;
+  color: #fffaf1;
+  font-weight: 850;
+  box-shadow: 0 18px 36px rgba(37, 52, 40, 0.18);
+}
+
+.seo-landing-section,
+.seo-static-section {
+  display: grid;
+  gap: 18px;
+  padding: 28px 0;
+  border-top: 1px solid rgba(68, 61, 51, 0.14);
+}
+
+.seo-landing-benefits,
+.seo-landing-faqs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.seo-landing-benefits article,
+.seo-landing-faqs article {
+  min-height: 100%;
+  padding: 18px;
+  border: 1px solid rgba(68, 61, 51, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 250, 241, 0.72);
+  box-shadow: 0 16px 36px rgba(65, 55, 43, 0.07);
+}
+
+.seo-landing-benefits p,
+.seo-landing-faqs p,
+.seo-static-section p,
+.seo-static-section li {
+  margin: 0;
+  color: #5f584f;
+  line-height: 1.75;
+}
+
+.seo-landing-faqs h3,
+.seo-static-section h3 {
+  margin: 0 0 8px;
+  color: #24251f;
+  font-size: 1.02rem;
+}
+
+.seo-static-eyebrow {
+  width: fit-content;
+  margin: 0;
+  color: #6d7565;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.seo-static-section h2 {
+  margin: 0;
+  color: #20231f;
+  font-size: 1.5rem;
+}
+
+.seo-static-section ul {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-left: 22px;
+}
+
+.seo-static-section table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  border: 1px solid rgba(68, 61, 51, 0.16);
+  border-radius: 8px;
+  background: #fffaf1;
+}
+
+.seo-static-section th,
+.seo-static-section td {
+  padding: 12px;
+  border-bottom: 1px solid rgba(68, 61, 51, 0.12);
+  color: #4f493f;
+  text-align: left;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -1041,6 +1172,11 @@ textarea:focus {
   .navbar__nav a {
     justify-content: flex-start;
     width: 100%;
+  }
+
+  .seo-landing-benefits,
+  .seo-landing-faqs {
+    grid-template-columns: 1fr;
   }
 
   .navbar__nav .navbar__cta {

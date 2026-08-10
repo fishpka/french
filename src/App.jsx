@@ -9,7 +9,7 @@ import {
   trackEvent,
 } from './lib/analytics.js';
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient.js';
-import { applySeoMetadata, getInternalHref, getPageIdFromLocation } from './seo.js';
+import { applySeoMetadata, getInternalHref, getPageById, getPageIdFromLocation } from './seo.js';
 
 const AuthPanel = lazy(() => import('./components/AuthPanel.jsx'));
 const ExportDataPanel = lazy(() => import('./components/ExportDataPanel.jsx'));
@@ -123,6 +123,12 @@ function createPhraseRegex(pattern) {
 
 function getCurrentPage() {
   return getPageIdFromLocation(window.location);
+}
+
+function getContentHref(href = '/') {
+  if (/^https?:\/\//.test(href)) return href;
+  if (href.startsWith('/')) return `${homePagePath}${href.slice(1)}`;
+  return href;
 }
 
 function normalizeWord(word) {
@@ -294,6 +300,73 @@ function TopVocabularyLoggedOutPreview({ onLogin, onSignup }) {
         僅彙整匿名單字統計，不會公開使用者或文章內容。
       </p>
     </section>
+  );
+}
+
+function SeoLandingPage({ page }) {
+  const content = page.content || {};
+  const benefits = content.benefits || [];
+  const faqs = content.faqs || [];
+
+  return (
+    <>
+      <Navbar
+        brand="French"
+        brandHref={homePagePath}
+        ctaHref={`${homePagePath}#analyzer`}
+        links={[
+          { label: '分析器', href: `${homePagePath}#analyzer` },
+          { label: 'Top 100', href: topVocabularyPagePath },
+          { label: 'CEFR', href: getInternalHref('cefr-vocabulaire') },
+        ]}
+      />
+      <main className="app-shell seo-landing-page" id="home">
+        <section className="seo-landing-hero" data-reveal>
+          {content.eyebrow ? <p className="eyebrow">{content.eyebrow}</p> : null}
+          <h1>{content.h1 || page.title}</h1>
+          <p>{content.intro || page.description}</p>
+          {content.ctaLabel ? (
+            <a className="seo-landing-cta" href={getContentHref(content.ctaHref || '/')}>
+              {content.ctaLabel}
+              <ArrowRight size={18} aria-hidden="true" />
+            </a>
+          ) : null}
+        </section>
+
+        {benefits.length ? (
+          <section className="seo-landing-section" aria-labelledby={`${page.id}-benefits`} data-reveal>
+            <div className="section-title">
+              <span>01</span>
+              <h2 id={`${page.id}-benefits`}>功能重點</h2>
+            </div>
+            <div className="seo-landing-benefits">
+              {benefits.map((benefit) => (
+                <article key={benefit}>
+                  <p>{benefit}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {faqs.length ? (
+          <section className="seo-landing-section" aria-labelledby={`${page.id}-faq`} data-reveal>
+            <div className="section-title">
+              <span>02</span>
+              <h2 id={`${page.id}-faq`}>常見問題</h2>
+            </div>
+            <div className="seo-landing-faqs">
+              {faqs.map((faq) => (
+                <article key={faq.question}>
+                  <h3>{faq.question}</h3>
+                  <p>{faq.answer}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
+      </main>
+    </>
   );
 }
 
@@ -1438,7 +1511,7 @@ export default function App() {
 
     return (
       <>
-        <Navbar brand="French" brandHref={homePagePath} links={navLinks} />
+        <Navbar brand="French" brandHref={homePagePath} ctaHref={`${homePagePath}#analyzer`} links={navLinks} />
         <main className="app-shell top-vocabulary-page" id="home">
           <section className="top-vocabulary-hero" data-reveal>
             <p className="eyebrow">Top 100 mots</p>
@@ -1508,9 +1581,13 @@ export default function App() {
     );
   }
 
+  if (page !== 'home') {
+    return <SeoLandingPage page={getPageById(page)} />;
+  }
+
   return (
     <>
-      <Navbar brand="French" brandHref={homePagePath} links={navLinks} />
+      <Navbar brand="French" brandHref={homePagePath} ctaHref="#analyzer" links={navLinks} />
       <main className="app-shell" id="home">
         <section className="intro" id="analyzer">
           <div className="intro__copy" data-reveal>

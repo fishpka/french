@@ -13,25 +13,226 @@
       "keywords": "法文詞頻, 法文 CEFR, 法文分析, French word frequency, 法文作文, 法文學習, 法文片語, 詞頻分析, B1, B2, C1, C2",
       "changefreq": "weekly",
       "priority": "1.0",
+      "lastmod": "2026-08-10",
       "breadcrumb": [
         { "name": "French 詞頻分析器", "path": "/" }
       ],
-      "schemaType": "WebApplication"
+      "schemaType": "WebApplication",
+      "content": {
+        "eyebrow": "French frequency studio",
+        "h1": "法文詞頻分析器",
+        "intro": "貼上法文文章、作文或口說稿，即時整理高頻詞、CEFR 詞彙難度、重複片語與常見句型。",
+        "benefits": [
+          "依出現次數找出真正需要優先複習的法文單字。",
+          "標示 A1 到 C2 與 Unknown 詞彙，快速看出文本難度。",
+          "整理重複句型、片語與句首，適合作文修稿與口說準備。"
+        ],
+        "ctaLabel": "開始法文詞頻分析",
+        "ctaHref": "/#analyzer",
+        "faqs": [
+          {
+            "question": "French 詞頻分析器會儲存我的文章嗎？",
+            "answer": "匿名使用者可以直接分析文字，網站不會為了全站統計儲存完整文章內容、Email、IP 或可識別資訊。"
+          },
+          {
+            "question": "CEFR 詞彙難度如何使用？",
+            "answer": "分析結果會把單字對應到 A1、A2、B1、B2、C1、C2 或 Unknown，幫助學習者判斷文本難度與複習優先順序。"
+          }
+        ]
+      }
     },
     {
       "id": "top-100-mots",
       "path": "/top-100-mots/",
       "legacyQuery": "?page=top-100-mots",
       "title": "Top 100 mots français｜全站法文高頻詞與 CEFR 等級",
-      "description": "查看 French 使用者最常分析的 100 個法文詞，依出現次數排序並標示 CEFR 等級，適合法文學習者追蹤常見詞彙。",
+      "description": "查看 French 使用者最常分析的 100 個法文詞，依出現次數排序並標示 CEFR 等級。資料僅彙整匿名 normalized word 統計，不公開原文或使用者資訊。",
       "keywords": "Top 100 mots français, 法文高頻詞, 法文常用詞, French vocabulary, CEFR vocabulary, 法文詞彙表",
       "changefreq": "daily",
       "priority": "0.8",
+      "lastmod": "2026-08-10",
       "breadcrumb": [
         { "name": "French 詞頻分析器", "path": "/" },
         { "name": "Top 100 mots français", "path": "/top-100-mots/" }
       ],
-      "schemaType": "CollectionPage"
+      "schemaType": "CollectionPage",
+      "content": {
+        "eyebrow": "Top 100 mots",
+        "h1": "全站熱門 100 個法文詞",
+        "intro": "看看學習者在真實文章分析中，最常遇到哪些法文單字。",
+        "benefits": [
+          "排行榜會將不同詞形標準化，例如 suis、es、sommes 統整至 être。",
+          "登入後可查看完整排行榜、出現次數、CEFR 程度與詞性。",
+          "僅彙整匿名單字統計，不會公開使用者或文章內容。"
+        ],
+        "ctaLabel": "免費登入，查看 Top 100",
+        "ctaHref": "/top-100-mots/",
+        "previewRows": [
+          { "rank": 1, "word": "être", "partOfSpeech": "verbe", "cefrLevel": "A1" },
+          { "rank": 2, "word": "avoir", "partOfSpeech": "verbe", "cefrLevel": "A1" },
+          { "rank": 3, "word": "faire", "partOfSpeech": "verbe", "cefrLevel": "A1" },
+          { "rank": 4, "word": "personne", "partOfSpeech": "nom", "cefrLevel": "A1" },
+          { "rank": 5, "word": "temps", "partOfSpeech": "nom", "cefrLevel": "A1" }
+        ],
+        "faqs": [
+          {
+            "question": "Top 100 mots 的資料是否包含使用者原文？",
+            "answer": "不包含。排行榜只使用匿名 normalized word 統計，不公開文章內容、Email、user_id、IP 或其他可識別資訊。"
+          },
+          {
+            "question": "normalized word 是什麼？",
+            "answer": "normalized word 會把不同詞形統整到核心詞，例如 suis、es、sommes 會歸到 être，讓排行榜更接近真正值得學習的詞彙。"
+          }
+        ]
+      }
+    },
+    {
+      "id": "cefr-vocabulaire",
+      "path": "/cefr-vocabulaire/",
+      "title": "法文 CEFR 詞彙分析｜A1 到 C2 單字難度檢查",
+      "description": "用 French 檢查法文文章中的 A1、A2、B1、B2、C1、C2 與 Unknown 詞彙分布，快速掌握文本難度與複習重點。",
+      "keywords": "法文 CEFR, CEFR vocabulary, 法文單字難度, A1 A2 B1 B2 C1 C2, 法文詞彙分析",
+      "changefreq": "monthly",
+      "priority": "0.7",
+      "lastmod": "2026-08-10",
+      "breadcrumb": [
+        { "name": "French 詞頻分析器", "path": "/" },
+        { "name": "法文 CEFR 詞彙分析", "path": "/cefr-vocabulaire/" }
+      ],
+      "schemaType": "WebPage",
+      "content": {
+        "eyebrow": "CEFR vocabulary",
+        "h1": "法文 CEFR 詞彙分析",
+        "intro": "把文章中的法文單字對應到 CEFR 等級，從 A1 到 C2 觀察文本難度、Unknown 詞彙與進階字比例。",
+        "benefits": [
+          "適合檢查作文、閱讀文本與口說稿是否符合目前學習程度。",
+          "快速找出超出程度的單字，安排更有效率的複習順序。",
+          "搭配詞頻結果，優先處理又常見又偏難的字。"
+        ],
+        "ctaLabel": "分析我的法文文章",
+        "ctaHref": "/#analyzer",
+        "faqs": [
+          {
+            "question": "Unknown 詞彙代表什麼？",
+            "answer": "Unknown 代表目前詞庫尚未對應到 CEFR 等級，通常值得另外檢查是否為專有名詞、變形、拼字或進階詞。"
+          },
+          {
+            "question": "CEFR 分析適合哪種法文文本？",
+            "answer": "適合作文、新聞段落、課堂閱讀材料、口說稿與自學筆記，用來估計詞彙難度和複習重點。"
+          }
+        ]
+      }
+    },
+    {
+      "id": "analyse-redaction-francaise",
+      "path": "/analyse-redaction-francaise/",
+      "title": "法文作文詞頻分析｜找出高頻詞、重複片語與句型",
+      "description": "貼上法文作文或口說稿，French 會整理高頻詞、重複片語、常見句首與 CEFR 難度，協助修稿與提升表達多樣性。",
+      "keywords": "法文作文分析, 法文作文修改, 法文詞頻分析, 法文口說稿, 法文句型",
+      "changefreq": "monthly",
+      "priority": "0.7",
+      "lastmod": "2026-08-10",
+      "breadcrumb": [
+        { "name": "French 詞頻分析器", "path": "/" },
+        { "name": "法文作文詞頻分析", "path": "/analyse-redaction-francaise/" }
+      ],
+      "schemaType": "WebPage",
+      "content": {
+        "eyebrow": "Text analysis",
+        "h1": "法文作文詞頻分析",
+        "intro": "用詞頻、CEFR 與句型統計檢查法文作文，找出太常重複的字、片語與論述結構。",
+        "benefits": [
+          "看出文章是否過度依賴同一批單字或句型。",
+          "整理常見論述句型，例如轉折、舉例、結論與因果。",
+          "把作文修稿變成具體可檢查的詞彙與句型清單。"
+        ],
+        "ctaLabel": "貼上作文開始分析",
+        "ctaHref": "/#analyzer",
+        "faqs": [
+          {
+            "question": "這個工具會幫我改作文嗎？",
+            "answer": "French 主要提供詞頻、難度與句型統計，不會直接代寫文章；它適合用來找出重複用字與修稿方向。"
+          },
+          {
+            "question": "可以分析口說稿嗎？",
+            "answer": "可以。口說稿也能透過詞頻與句型統計檢查用字是否集中、句型是否單一，以及是否出現太多 Unknown 詞。"
+          }
+        ]
+      }
+    },
+    {
+      "id": "mots-francais-frequents",
+      "path": "/mots-francais-frequents/",
+      "title": "法文常用詞整理｜用詞頻找出優先學習單字",
+      "description": "French 透過 normalized word 與詞頻排序，協助法文學習者從文章中找出最常出現、最值得優先複習的核心單字。",
+      "keywords": "法文常用詞, 法文高頻詞, mots français fréquents, 法文單字表, 法文學習",
+      "changefreq": "monthly",
+      "priority": "0.65",
+      "lastmod": "2026-08-10",
+      "breadcrumb": [
+        { "name": "French 詞頻分析器", "path": "/" },
+        { "name": "法文常用詞整理", "path": "/mots-francais-frequents/" }
+      ],
+      "schemaType": "WebPage",
+      "content": {
+        "eyebrow": "Frequent words",
+        "h1": "法文常用詞整理",
+        "intro": "用文章中的真實出現次數找出高頻法文單字，並透過 normalized word 把詞形變化統整到核心詞。",
+        "benefits": [
+          "比單純背字母順序單字表更貼近實際閱讀需求。",
+          "同時看到詞頻與 CEFR，知道哪些字既常見又適合目前程度。",
+          "登入後可把重要單字加入收藏，建立自己的學習清單。"
+        ],
+        "ctaLabel": "建立我的常用詞清單",
+        "ctaHref": "/#analyzer",
+        "faqs": [
+          {
+            "question": "為什麼要看 normalized word？",
+            "answer": "法文有許多動詞變化與陰陽性、單複數形式，normalized word 可以把不同詞形統整成更容易學習的核心詞。"
+          },
+          {
+            "question": "常用詞排序會顯示假資料嗎？",
+            "answer": "功能預覽只會清楚標示為範例；真實全站排行榜只顯示匿名彙總後的 normalized word 統計。"
+          }
+        ]
+      }
+    },
+    {
+      "id": "structures-phrases-francaises",
+      "path": "/structures-phrases-francaises/",
+      "title": "法文句型與片語分析｜找出重複句首、轉折與論述結構",
+      "description": "French 會檢查法文文本中的重複片語、常見句首與論述句型，幫助作文和口說稿避免表達單調。",
+      "keywords": "法文句型, 法文片語, 法文作文句型, 法文論述句型, 重複片語分析",
+      "changefreq": "monthly",
+      "priority": "0.65",
+      "lastmod": "2026-08-10",
+      "breadcrumb": [
+        { "name": "French 詞頻分析器", "path": "/" },
+        { "name": "法文句型與片語分析", "path": "/structures-phrases-francaises/" }
+      ],
+      "schemaType": "WebPage",
+      "content": {
+        "eyebrow": "Phrase patterns",
+        "h1": "法文句型與片語分析",
+        "intro": "除了單字，French 也會整理文章中的重複片語、常見句首與論述句型，協助檢查表達是否過度重複。",
+        "benefits": [
+          "快速看出文章是否一直使用相同開頭或連接詞。",
+          "標示常見論述功能，例如意見、舉例、轉折、結果與結論。",
+          "適合用於 DELF/DALF 作文、課堂報告與口說稿準備。"
+        ],
+        "ctaLabel": "檢查我的句型",
+        "ctaHref": "/#analyzer",
+        "faqs": [
+          {
+            "question": "句型分析會取代老師批改嗎？",
+            "answer": "不會。它提供可量化的重複片語與句型線索，適合作為修稿前的自我檢查。"
+          },
+          {
+            "question": "可以用來準備 DELF 或 DALF 嗎？",
+            "answer": "可以用於檢查作文或口說稿的論述連接詞、句首變化與高頻片語，但仍需要搭配正式評分標準。"
+          }
+        ]
+      }
     }
   ]
 }

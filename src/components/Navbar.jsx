@@ -1,7 +1,7 @@
 import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
 
-export default function Navbar({ brand, brandHref = '#home', links }) {
+export default function Navbar({ brand, brandHref = '#home', links, ctaHref = '#analyzer' }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const closeMenu = () => setIsOpen(false);
@@ -25,7 +25,7 @@ export default function Navbar({ brand, brandHref = '#home', links }) {
             {link.label}
           </a>
         ))}
-        <a className="navbar__cta" href="#analyzer" onClick={closeMenu}>
+        <a className="navbar__cta" href={ctaHref} onClick={closeMenu}>
           開始分析
         </a>
       </nav>

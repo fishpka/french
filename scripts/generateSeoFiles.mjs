@@ -3,13 +3,11 @@ import path from 'node:path';
 import { getAbsoluteUrl, readSeoConfig, repoPaths } from './seoConfig.mjs';
 
 const config = readSeoConfig();
-const lastmod = new Date().toISOString().slice(0, 10);
-
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${config.pages.map((page) => `  <url>
     <loc>${getAbsoluteUrl(config, page)}</loc>
-    <lastmod>${lastmod}</lastmod>
+    <lastmod>${page.lastmod || new Date().toISOString().slice(0, 10)}</lastmod>
     <changefreq>${page.changefreq}</changefreq>
     <priority>${page.priority}</priority>
   </url>`).join('\n')}

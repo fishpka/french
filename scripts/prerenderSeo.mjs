@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
+  buildFaqSchema,
   buildBreadcrumbSchema,
   buildPageSchema,
   getAbsoluteUrl,
@@ -16,6 +17,13 @@ function escapeHtml(value) {
     .replaceAll('"', '&quot;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;');
+}
+
+function resolveInternalHref(config, href = '/') {
+  if (/^https?:\/\//.test(href)) return href;
+  const basePath = config.basePath;
+  const normalized = href.startsWith('/') ? href.slice(1) : href;
+  return `${basePath}${normalized}`;
 }
 
 function replaceOrInsert(headHtml, selectorRegex, replacement) {
@@ -45,13 +53,89 @@ function renderHead(html, config, page) {
   output = replaceOrInsert(output, /<meta\s+name="twitter:description"[^>]*>/, `<meta name="twitter:description" content="${escapeHtml(page.description)}" />`);
   output = replaceOrInsert(output, /<meta\s+name="twitter:image"[^>]*>/, `<meta name="twitter:image" content="${imageUrl}" />`);
 
-  const schema = JSON.stringify([buildPageSchema(config, page), buildBreadcrumbSchema(config, page)]);
+  const schemas = [
+    buildPageSchema(config, page),
+    buildBreadcrumbSchema(config, page),
+    buildFaqSchema(page),
+  ].filter(Boolean);
+  const schema = JSON.stringify(schemas);
   output = output.replace(
-    /<script type="application\/ld\+json">.*?<\/script>/s,
-    `<script type="application/ld+json">${schema}</script>`,
+    /<script(?:\s+id="seo-page-schema")?\s+type="application\/ld\+json">.*?<\/script>/s,
+    `<script id="seo-page-schema" type="application/ld+json">${schema}</script>`,
   );
 
   return output;
+}
+
+function renderStaticBody(config, page) {
+  const content = page.content || {};
+  const benefits = content.benefits || [];
+  const faqs = content.faqs || [];
+  const previewRows = content.previewRows || [];
+  const ctaHref = resolveInternalHref(config, content.ctaHref || page.path);
+
+  return `
+    <div id="root">
+      <main class="seo-static-page" aria-labelledby="seo-static-title">
+        <section class="seo-static-hero">
+          ${content.eyebrow ? `<p class="seo-static-eyebrow">${escapeHtml(content.eyebrow)}</p>` : ''}
+          <h1 id="seo-static-title">${escapeHtml(content.h1 || page.title)}</h1>
+          <p>${escapeHtml(content.intro || page.description)}</p>
+          ${content.ctaLabel ? `<a class="seo-static-cta" href="${escapeHtml(ctaHref)}">${escapeHtml(content.ctaLabel)}</a>` : ''}
+        </section>
+        ${benefits.length ? `
+          <section class="seo-static-section" aria-labelledby="seo-static-benefits">
+            <h2 id="seo-static-benefits">功能重點</h2>
+            <ul>
+              ${benefits.map((benefit) => `<li>${escapeHtml(benefit)}</li>`).join('')}
+            </ul>
+          </section>
+        ` : ''}
+        ${previewRows.length ? `
+          <section class="seo-static-section" aria-labelledby="seo-static-preview">
+            <h2 id="seo-static-preview">功能預覽</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">排名</th>
+                  <th scope="col">Normalized word</th>
+                  <th scope="col">詞性</th>
+                  <th scope="col">CEFR</th>
+                  <th scope="col">出現次數</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${previewRows.map((row) => `
+                  <tr>
+                    <td>${escapeHtml(row.rank)}</td>
+                    <td>${escapeHtml(row.word)}</td>
+                    <td>${escapeHtml(row.partOfSpeech)}</td>
+                    <td>${escapeHtml(row.cefrLevel)}</td>
+                    <td>登入後查看</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </section>
+        ` : ''}
+        ${faqs.length ? `
+          <section class="seo-static-section" aria-labelledby="seo-static-faq">
+            <h2 id="seo-static-faq">常見問題</h2>
+            ${faqs.map((faq) => `
+              <article>
+                <h3>${escapeHtml(faq.question)}</h3>
+                <p>${escapeHtml(faq.answer)}</p>
+              </article>
+            `).join('')}
+          </section>
+        ` : ''}
+      </main>
+    </div>
+  `;
+}
+
+function renderBody(html, config, page) {
+  return html.replace(/<div id="root"><\/div>/, renderStaticBody(config, page));
 }
 
 const config = readSeoConfig();
@@ -59,7 +143,10 @@ const sourceHtml = fs.readFileSync(path.join(repoPaths.distDir, 'index.html'), '
 const homePage = config.pages.find((page) => page.path === '/');
 
 if (homePage) {
-  fs.writeFileSync(path.join(repoPaths.distDir, 'index.html'), renderHead(sourceHtml, config, homePage));
+  fs.writeFileSync(
+    path.join(repoPaths.distDir, 'index.html'),
+    renderBody(renderHead(sourceHtml, config, homePage), config, homePage),
+  );
 }
 
 config.pages
@@ -67,7 +154,10 @@ config.pages
   .forEach((page) => {
     const pageDir = path.join(repoPaths.distDir, trimSlashes(page.path));
     fs.mkdirSync(pageDir, { recursive: true });
-    fs.writeFileSync(path.join(pageDir, 'index.html'), renderHead(sourceHtml, config, page));
+    fs.writeFileSync(
+      path.join(pageDir, 'index.html'),
+      renderBody(renderHead(sourceHtml, config, page), config, page),
+    );
   });
 
 console.log(`Prerendered ${config.pages.length} static SEO pages.`);

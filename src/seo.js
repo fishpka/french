@@ -87,7 +87,7 @@ function buildPageSchema(page) {
     description: page.description,
     url: getAbsoluteUrl(page),
     image: getAssetUrl(seoConfig.ogImage),
-    inLanguage: [seoConfig.defaultLocale, 'fr'],
+    inLanguage: seoConfig.defaultLocale,
   };
 
   if (page.schemaType === 'WebApplication') {
@@ -100,6 +100,7 @@ function buildPageSchema(page) {
         price: '0',
         priceCurrency: 'USD',
       },
+      featureList: page.content?.benefits || undefined,
     };
   }
 
@@ -113,6 +114,24 @@ function buildPageSchema(page) {
   };
 }
 
+function buildFaqSchema(page) {
+  const faqs = page.content?.faqs || [];
+  if (!faqs.length) return null;
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  };
+}
+
 function upsertJsonLd(id, schema) {
   let element = document.getElementById(id);
   if (!element) {
@@ -122,6 +141,16 @@ function upsertJsonLd(id, schema) {
     document.head.appendChild(element);
   }
   element.textContent = JSON.stringify(schema);
+}
+
+function removeJsonLd(id) {
+  document.getElementById(id)?.remove();
+}
+
+function removeLegacyJsonLd() {
+  document
+    .querySelectorAll('script[type="application/ld+json"]:not([id])')
+    .forEach((element) => element.remove());
 }
 
 export function applySeoMetadata(pageId) {
@@ -160,6 +189,13 @@ export function applySeoMetadata(pageId) {
   upsertMeta('meta[name="twitter:image"]', { name: 'twitter:image', content: imageUrl });
   upsertMeta('meta[name="twitter:image:alt"]', { name: 'twitter:image:alt', content: `${seoConfig.siteName} 預覽圖` });
 
+  removeLegacyJsonLd();
   upsertJsonLd('seo-page-schema', buildPageSchema(page));
   upsertJsonLd('seo-breadcrumb-schema', buildBreadcrumbSchema(page));
+  const faqSchema = buildFaqSchema(page);
+  if (faqSchema) {
+    upsertJsonLd('seo-faq-schema', faqSchema);
+  } else {
+    removeJsonLd('seo-faq-schema');
+  }
 }
