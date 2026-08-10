@@ -18,7 +18,10 @@ export type AnalyticsEventName =
   | 'top_vocabulary_copy'
   | 'global_top_vocabulary_copy'
   | 'top_100_banner_click'
-  | 'export_csv_click';
+  | 'export_csv_click'
+  | 'save_word'
+  | 'remove_saved_word'
+  | 'view_saved_words';
 
 export type UserStatus = 'anonymous' | 'logged_in';
 export type AuthState = 'logged_out' | 'authenticated';
@@ -63,6 +66,9 @@ export interface AnalyticsEventDataMap {
   global_top_vocabulary_copy: { count: number };
   top_100_banner_click: { page_path?: string };
   export_csv_click: { user_status?: UserStatus };
+  save_word: { word: string; cefr?: CefrLevel; source: 'analysis' };
+  remove_saved_word: { word: string; cefr?: CefrLevel };
+  view_saved_words: { saved_count: number };
 }
 
 export const ANALYTICS_EVENTS: Readonly<Record<string, AnalyticsEventName>>;

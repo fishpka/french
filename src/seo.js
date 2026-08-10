@@ -165,7 +165,10 @@ export function applySeoMetadata(pageId) {
 
   upsertMeta('meta[name="description"]', { name: 'description', content: page.description });
   upsertMeta('meta[name="keywords"]', { name: 'keywords', content: page.keywords });
-  upsertMeta('meta[name="robots"]', { name: 'robots', content: 'index, follow, max-image-preview:large' });
+  upsertMeta('meta[name="robots"]', {
+    name: 'robots',
+    content: page.index === false ? 'noindex, follow' : 'index, follow, max-image-preview:large',
+  });
   upsertLink('link[rel="canonical"]', { rel: 'canonical', href: canonicalUrl });
   upsertLink('link[rel="alternate"][hreflang="zh-Hant"]', { rel: 'alternate', hreflang: 'zh-Hant', href: canonicalUrl });
   upsertLink('link[rel="alternate"][hreflang="x-default"]', { rel: 'alternate', hreflang: 'x-default', href: canonicalUrl });

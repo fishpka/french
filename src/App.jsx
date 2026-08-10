@@ -1,5 +1,5 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Copy, Lock, RefreshCcw, UserPlus } from 'lucide-react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowRight, Copy, Heart, Lock, RefreshCcw, Trash2, UserPlus } from 'lucide-react';
 import Navbar from './components/Navbar.jsx';
 import { getAnalysisHistory, getGlobalTopWords } from './lib/analysisPersistence.js';
 import {
@@ -9,6 +9,7 @@ import {
   trackEvent,
 } from './lib/analytics.js';
 import { isSupabaseConfigured, supabase } from './lib/supabaseClient.js';
+import { getWordId, useSavedWords } from './lib/savedWords.js';
 import { applySeoMetadata, getInternalHref, getPageById, getPageIdFromLocation } from './seo.js';
 
 const AuthPanel = lazy(() => import('./components/AuthPanel.jsx'));
@@ -41,6 +42,7 @@ function loadFrenchDataModules() {
 const showTopVocabulary = false;
 const topVocabularyPagePath = getInternalHref('top-100-mots');
 const homePagePath = getInternalHref('home');
+const myVocabularyPagePath = getInternalHref('my-vocabulary');
 
 const links = [
   { label: '分析器', href: '#analyzer' },
@@ -99,6 +101,14 @@ const patternRules = [
 ];
 
 const cefrLevels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2', 'Unknown'];
+const cefrFilterLevels = ['全部', ...cefrLevels];
+const savedWordSortOptions = [
+  { value: 'recent', label: '最近收藏' },
+  { value: 'oldest', label: '最早收藏' },
+  { value: 'cefr-asc', label: 'A1 → C2' },
+  { value: 'cefr-desc', label: 'C2 → A1' },
+  { value: 'az', label: 'A → Z' },
+];
 const autoDictionaryDefaultLevel = 'B2';
 const autoDictionaryLimit = 20;
 const showActionRecommendations = false;
@@ -303,10 +313,78 @@ function TopVocabularyLoggedOutPreview({ onLogin, onSignup }) {
   );
 }
 
-function SeoLandingPage({ page }) {
-  const content = page.content || {};
-  const benefits = content.benefits || [];
-  const faqs = content.faqs || [];
+function SavedWordButton({ wordData, isSaved, onToggle, compact = false }) {
+  const label = isSaved ? '已收藏' : '收藏';
+  const ariaLabel = `${isSaved ? '取消收藏' : '收藏'} ${wordData.word}`;
+
+  return (
+    <button
+      className={`saved-word-button ${isSaved ? 'saved-word-button--saved' : ''} ${compact ? 'saved-word-button--compact' : ''}`}
+      type="button"
+      aria-label={ariaLabel}
+      aria-pressed={isSaved}
+      onClick={() => onToggle(wordData)}
+    >
+      <Heart size={15} fill={isSaved ? 'currentColor' : 'none'} aria-hidden="true" />
+      {label}
+    </button>
+  );
+}
+
+function getSavedWordFilterCounts(savedWords) {
+  const counts = new Map(cefrFilterLevels.map((level) => [level, 0]));
+  counts.set('全部', savedWords.length);
+
+  savedWords.forEach((item) => {
+    const level = cefrLevels.includes(item.cefr) ? item.cefr : 'Unknown';
+    counts.set(level, (counts.get(level) || 0) + 1);
+  });
+
+  return counts;
+}
+
+function sortSavedWords(words, sortMode) {
+  const cefrRank = new Map(cefrLevels.map((level, index) => [level, index]));
+  const byDate = (a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime();
+
+  return words.slice().sort((a, b) => {
+    if (sortMode === 'oldest') return -byDate(a, b);
+    if (sortMode === 'cefr-asc') {
+      return (cefrRank.get(a.cefr) ?? 99) - (cefrRank.get(b.cefr) ?? 99)
+        || a.lemma.localeCompare(b.lemma);
+    }
+    if (sortMode === 'cefr-desc') {
+      return (cefrRank.get(b.cefr) ?? -1) - (cefrRank.get(a.cefr) ?? -1)
+        || a.lemma.localeCompare(b.lemma);
+    }
+    if (sortMode === 'az') return a.lemma.localeCompare(b.lemma);
+    return byDate(a, b);
+  });
+}
+
+function MyVocabularyPage({
+  savedWords,
+  savedCount,
+  onRemove,
+  onClear,
+}) {
+  const [activeFilter, setActiveFilter] = useState('全部');
+  const [sortMode, setSortMode] = useState('recent');
+  const filterCounts = useMemo(() => getSavedWordFilterCounts(savedWords), [savedWords]);
+  const visibleFilters = cefrFilterLevels.filter((level) => level === '全部' || filterCounts.get(level));
+  const filteredWords = useMemo(() => {
+    const words = activeFilter === '全部'
+      ? savedWords
+      : savedWords.filter((item) => (item.cefr || 'Unknown') === activeFilter);
+    return sortSavedWords(words, sortMode);
+  }, [activeFilter, savedWords, sortMode]);
+
+  const handleClearAll = () => {
+    if (!savedWords.length) return;
+    if (window.confirm('確定要清除全部收藏的生字嗎？')) {
+      onClear();
+    }
+  };
 
   return (
     <>
@@ -316,6 +394,103 @@ function SeoLandingPage({ page }) {
         ctaHref={`${homePagePath}#analyzer`}
         links={[
           { label: '分析器', href: `${homePagePath}#analyzer` },
+          { label: `我的生字 ${savedCount}`, href: myVocabularyPagePath },
+          { label: 'Top 100', href: topVocabularyPagePath },
+        ]}
+      />
+      <main className="app-shell saved-words-page" id="home">
+        <section className="saved-words-hero" data-reveal>
+          <p className="eyebrow">My vocabulary</p>
+          <h1>我的生字</h1>
+          <p>收藏你在文章分析中遇到、不熟悉或想複習的法文單字。</p>
+          <strong>已收藏 {savedCount} 個單字</strong>
+        </section>
+
+        {savedWords.length ? (
+          <>
+            <section className="saved-words-controls" aria-label="我的生字篩選與排序" data-reveal>
+              <div className="saved-words-filters" role="group" aria-label="依 CEFR 篩選">
+                {visibleFilters.map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    className={activeFilter === level ? 'is-active' : ''}
+                    aria-pressed={activeFilter === level}
+                    onClick={() => setActiveFilter(level)}
+                  >
+                    {level}
+                    {' '}
+                    <span>{filterCounts.get(level) || 0}</span>
+                  </button>
+                ))}
+              </div>
+              <label className="saved-words-sort">
+                <span>排序</span>
+                <select value={sortMode} onChange={(event) => setSortMode(event.target.value)}>
+                  {savedWordSortOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+            </section>
+
+            <section className="saved-words-list" aria-label="收藏的法文生字" data-reveal>
+              {filteredWords.map((item) => (
+                <article className="saved-word-card" key={getWordId(item)}>
+                  <div>
+                    <h2>{item.word}</h2>
+                    <p>
+                      {item.cefr || 'Unknown'}
+                      {item.pos ? ` · ${item.pos}` : ''}
+                      {Number.isFinite(item.count) ? ` · ${item.count} 次` : ''}
+                    </p>
+                    {item.lemma && item.lemma !== item.word ? <small>Lemma: {item.lemma}</small> : null}
+                    {item.translation ? <small>{item.translation}</small> : null}
+                  </div>
+                  <button type="button" onClick={() => onRemove(item)} aria-label={`移除收藏 ${item.word}`}>
+                    <Trash2 size={16} aria-hidden="true" />
+                    移除
+                  </button>
+                </article>
+              ))}
+            </section>
+
+            <div className="saved-words-danger" data-reveal>
+              <button type="button" onClick={handleClearAll}>
+                清除全部收藏
+              </button>
+            </div>
+          </>
+        ) : (
+          <section className="saved-words-empty" data-reveal>
+            <h2>還沒有收藏的生字</h2>
+            <p>分析一篇法文文章後，點擊單字旁的 ♡ 即可加入收藏。</p>
+            <a href={`${homePagePath}#analyzer`}>
+              開始分析文章
+              <ArrowRight size={18} aria-hidden="true" />
+            </a>
+          </section>
+        )}
+      </main>
+    </>
+  );
+}
+
+function SeoLandingPage({ page, savedCount = 0 }) {
+  const content = page.content || {};
+  const benefits = content.benefits || [];
+  const faqs = content.faqs || [];
+  const savedWordsLabel = savedCount ? `我的生字 ${savedCount}` : '我的生字';
+
+  return (
+    <>
+      <Navbar
+        brand="French"
+        brandHref={homePagePath}
+        ctaHref={`${homePagePath}#analyzer`}
+        links={[
+          { label: '分析器', href: `${homePagePath}#analyzer` },
+          { label: savedWordsLabel, href: myVocabularyPagePath },
           { label: 'Top 100', href: topVocabularyPagePath },
           { label: 'CEFR', href: getInternalHref('cefr-vocabulaire') },
         ]}
@@ -638,6 +813,31 @@ function getCefrLevelForWord(word, nlpTokenMap) {
 function getChineseGlossForWord(word, nlpTokenMap) {
   const normalizedWord = normalizeFrenchWord(word, nlpTokenMap);
   return frenchChineseGlosses[word] || frenchChineseGlosses[normalizedWord] || '';
+}
+
+function getPartOfSpeechForWord(word, nlpTokenMap) {
+  const normalizedWord = normalizeWord(word);
+  const lemma = normalizeFrenchWord(word, nlpTokenMap);
+  return nlpTokenMap?.get(normalizedWord)?.pos || nlpTokenMap?.get(lemma)?.pos || '';
+}
+
+function buildSavedWordData(item, nlpTokenMap, sourceWordsTotal = 0) {
+  const word = item.word || item.normalizedWord || '';
+  const lemma = item.lemma || item.normalizedWord || normalizeFrenchWord(word, nlpTokenMap);
+  const count = Number(item.count || 0);
+  const total = Number(sourceWordsTotal || 0);
+  const frequency = total > 0 && count > 0 ? count / total : undefined;
+  const savedWord = {
+    word,
+    lemma,
+    cefr: item.cefr || item.cefrLevel || getCefrLevelForWord(word, nlpTokenMap),
+    pos: item.pos || item.partOfSpeech || getPartOfSpeechForWord(word, nlpTokenMap),
+    count,
+    translation: item.translation || getChineseGlossForWord(word, nlpTokenMap),
+  };
+
+  if (Number.isFinite(frequency)) savedWord.frequency = frequency;
+  return savedWord;
 }
 
 function isSentenceStart(text, index) {
@@ -1182,6 +1382,16 @@ export default function App() {
   const [frenchDataVersion, setFrenchDataVersion] = useState(0);
   const [nlpTokens, setNlpTokens] = useState([]);
   const isTopVocabularyPage = page === 'top-100-mots';
+  const isMyVocabularyPage = page === 'my-vocabulary';
+  const viewedSavedWordsRef = useRef(false);
+  const {
+    savedWords,
+    isSaved,
+    toggleSavedWord,
+    removeWord,
+    clearSavedWords,
+    savedCount,
+  } = useSavedWords();
   const nlpTokenMap = useMemo(() => buildNlpTokenMap(nlpTokens), [nlpTokens]);
   const analysis = useMemo(() => analyzeText(text, nlpTokenMap), [text, nlpTokenMap, frenchDataVersion]);
   const analysisSnapshot = useMemo(() => ({
@@ -1211,16 +1421,29 @@ export default function App() {
   const cloudWords = analysis.topWords.slice(0, 24);
   const cloudAnimationKey = useMemo(() => getWordCountSignature(cloudWords), [cloudWords]);
   const isAuthenticated = Boolean(session?.user?.id);
+  const savedWordsNavLabel = savedCount ? `我的生字 ${savedCount}` : '我的生字';
   const navLinks = isTopVocabularyPage
     ? [
         { label: '分析器', href: `${homePagePath}#analyzer` },
+        { label: savedWordsNavLabel, href: myVocabularyPagePath },
         { label: 'Top 100', href: topVocabularyPagePath },
       ]
-    : links;
+    : [
+        ...links.slice(0, 3),
+        { label: savedWordsNavLabel, href: myVocabularyPagePath },
+        ...links.slice(3),
+      ];
 
   useEffect(() => {
     applySeoMetadata(page);
   }, [page]);
+
+  useEffect(() => {
+    if (isMyVocabularyPage && !viewedSavedWordsRef.current) {
+      viewedSavedWordsRef.current = true;
+      trackEvent(ANALYTICS_EVENTS.VIEW_SAVED_WORDS, { saved_count: savedCount });
+    }
+  }, [isMyVocabularyPage, savedCount]);
 
   useEffect(() => {
     const handlePopState = () => setPage(getCurrentPage());
@@ -1420,6 +1643,33 @@ export default function App() {
   const openTop100LoginPrompt = () => openAuthPrompt('preview_primary_cta', ANALYTICS_EVENTS.TOP100_LOGIN_CLICK);
   const openTop100SignupPrompt = () => openAuthPrompt('preview_secondary_cta', ANALYTICS_EVENTS.TOP100_SIGNUP_CLICK);
 
+  const handleToggleSavedWord = (wordData) => {
+    const result = toggleSavedWord(wordData);
+    const eventWord = result.word || wordData;
+
+    if (result.action === 'saved') {
+      trackEvent(ANALYTICS_EVENTS.SAVE_WORD, {
+        word: eventWord.lemma || eventWord.word,
+        cefr: eventWord.cefr || 'Unknown',
+        source: 'analysis',
+      });
+      return;
+    }
+
+    trackEvent(ANALYTICS_EVENTS.REMOVE_SAVED_WORD, {
+      word: eventWord.lemma || eventWord.word,
+      cefr: eventWord.cefr || 'Unknown',
+    });
+  };
+
+  const handleRemoveSavedWord = (wordData) => {
+    removeWord(wordData);
+    trackEvent(ANALYTICS_EVENTS.REMOVE_SAVED_WORD, {
+      word: wordData.lemma || wordData.word,
+      cefr: wordData.cefr || 'Unknown',
+    });
+  };
+
   const handleAnalysisRequest = () => {
     const userStatus = isAuthenticated ? 'logged_in' : 'anonymous';
     trackEvent(ANALYTICS_EVENTS.ANALYSIS_STARTED);
@@ -1581,8 +1831,19 @@ export default function App() {
     );
   }
 
+  if (isMyVocabularyPage) {
+    return (
+      <MyVocabularyPage
+        savedWords={savedWords}
+        savedCount={savedCount}
+        onRemove={handleRemoveSavedWord}
+        onClear={clearSavedWords}
+      />
+    );
+  }
+
   if (page !== 'home') {
-    return <SeoLandingPage page={getPageById(page)} />;
+    return <SeoLandingPage page={getPageById(page)} savedCount={savedCount} />;
   }
 
   return (
@@ -1727,6 +1988,12 @@ export default function App() {
                     <div style={{ width: `${(item.count / maxCount) * 100}%` }} />
                   </div>
                   <strong>{item.count}</strong>
+                  <SavedWordButton
+                    wordData={buildSavedWordData(item, nlpTokenMap, analysis.contentWords.length)}
+                    isSaved={isSaved(buildSavedWordData(item, nlpTokenMap, analysis.contentWords.length))}
+                    onToggle={handleToggleSavedWord}
+                    compact
+                  />
                 </div>
               ))}
             </div>

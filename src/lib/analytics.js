@@ -19,6 +19,9 @@ export const ANALYTICS_EVENTS = Object.freeze({
   GLOBAL_TOP_VOCABULARY_COPY: 'global_top_vocabulary_copy',
   TOP_100_BANNER_CLICK: 'top_100_banner_click',
   EXPORT_CSV_CLICK: 'export_csv_click',
+  SAVE_WORD: 'save_word',
+  REMOVE_SAVED_WORD: 'remove_saved_word',
+  VIEW_SAVED_WORDS: 'view_saved_words',
 });
 
 const allowedEventProperties = Object.freeze({
@@ -47,6 +50,9 @@ const allowedEventProperties = Object.freeze({
   [ANALYTICS_EVENTS.GLOBAL_TOP_VOCABULARY_COPY]: new Set(['count']),
   [ANALYTICS_EVENTS.TOP_100_BANNER_CLICK]: new Set(['page_path']),
   [ANALYTICS_EVENTS.EXPORT_CSV_CLICK]: new Set(['user_status']),
+  [ANALYTICS_EVENTS.SAVE_WORD]: new Set(['word', 'cefr', 'source']),
+  [ANALYTICS_EVENTS.REMOVE_SAVED_WORD]: new Set(['word', 'cefr']),
+  [ANALYTICS_EVENTS.VIEW_SAVED_WORDS]: new Set(['saved_count']),
 });
 
 const sensitiveKeyPattern = /email|mail|user.?id|uuid|token|secret|password|ip|address|content|text|article|raw|session/i;
@@ -79,6 +85,9 @@ function normalizeEventValue(key, value) {
   if (key === 'error_type') return value.replace(/[^a-z0-9_:-]/gi, '').slice(0, 60) || 'unknown_error';
   if (key === 'page_path') return value.slice(0, 120);
   if (key === 'source_section') return value.replace(/[^a-z0-9_:-]/gi, '').slice(0, 60);
+  if (key === 'source') return value.replace(/[^a-z0-9_:-]/gi, '').slice(0, 60);
+  if (key === 'cefr') return cefrLevels.has(value) ? value : 'Unknown';
+  if (key === 'word') return value.slice(0, 80);
 
   return value.slice(0, 120);
 }

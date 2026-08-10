@@ -87,6 +87,35 @@
       }
     },
     {
+      "id": "my-vocabulary",
+      "path": "/my-vocabulary/",
+      "title": "我的生字｜French 個人收藏單字",
+      "description": "查看你在 French 法文詞頻分析中收藏的個人生字。此頁僅使用本機瀏覽器資料，不會公開或索引。",
+      "keywords": "我的生字, 法文收藏單字, French vocabulary",
+      "changefreq": "monthly",
+      "priority": "0.1",
+      "lastmod": "2026-08-10",
+      "index": false,
+      "breadcrumb": [
+        { "name": "French 詞頻分析器", "path": "/" },
+        { "name": "我的生字", "path": "/my-vocabulary/" }
+      ],
+      "schemaType": "WebPage",
+      "content": {
+        "eyebrow": "My vocabulary",
+        "h1": "我的生字",
+        "intro": "收藏你在文章分析中遇到、不熟悉或想複習的法文單字。",
+        "benefits": [
+          "收藏資料只存在你的瀏覽器 LocalStorage。",
+          "重新整理或下次回到同一個瀏覽器仍會保留。",
+          "這是個人資料頁，搜尋引擎不需要索引。"
+        ],
+        "ctaLabel": "開始分析文章",
+        "ctaHref": "/#analyzer",
+        "faqs": []
+      }
+    },
+    {
       "id": "cefr-vocabulaire",
       "path": "/cefr-vocabulaire/",
       "title": "法文 CEFR 詞彙分析｜A1 到 C2 單字難度檢查",

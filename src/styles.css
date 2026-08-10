@@ -432,7 +432,7 @@ textarea:focus {
 
 .bar-row {
   display: grid;
-  grid-template-columns: 130px minmax(0, 1fr) 34px;
+  grid-template-columns: 130px minmax(0, 1fr) 34px auto;
   gap: 12px;
   align-items: center;
 }
@@ -716,6 +716,238 @@ textarea:focus {
 
 .cefr-words small {
   color: #746b5f;
+}
+
+.saved-word-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 11px;
+  border: 1px solid rgba(68, 61, 51, 0.18);
+  border-radius: 7px;
+  background: rgba(255, 250, 241, 0.76);
+  color: #5f584f;
+  font-size: 0.82rem;
+  font-weight: 850;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color var(--motion-fast) var(--motion-ease),
+    border-color var(--motion-fast) var(--motion-ease),
+    color var(--motion-fast) var(--motion-ease),
+    transform var(--motion-fast) var(--motion-ease);
+}
+
+.saved-word-button:hover,
+.saved-word-button:focus-visible {
+  border-color: #4d7c0f;
+  color: #253428;
+  transform: translateY(-1px);
+}
+
+.saved-word-button--saved {
+  border-color: rgba(77, 124, 15, 0.34);
+  background: rgba(225, 236, 209, 0.82);
+  color: #3f6d11;
+}
+
+.saved-word-button--compact {
+  min-height: 36px;
+  padding: 0 9px;
+  font-size: 0.76rem;
+}
+
+.saved-words-page {
+  display: grid;
+  gap: 24px;
+}
+
+.saved-words-hero {
+  display: grid;
+  gap: 14px;
+  max-width: 820px;
+  padding: clamp(48px, 8vw, 94px) 0 8px;
+}
+
+.saved-words-hero h1 {
+  margin: 0;
+  color: #20231f;
+  font-size: clamp(2.8rem, 8vw, 6rem);
+  line-height: 0.94;
+  letter-spacing: 0;
+}
+
+.saved-words-hero p {
+  max-width: 640px;
+  margin: 0;
+  color: #514c44;
+  font-size: 1.08rem;
+  line-height: 1.75;
+}
+
+.saved-words-hero strong {
+  width: fit-content;
+  padding: 8px 12px;
+  border: 1px solid rgba(77, 124, 15, 0.26);
+  border-radius: 7px;
+  background: rgba(225, 236, 209, 0.62);
+  color: #3f6d11;
+  font-size: 0.92rem;
+}
+
+.saved-words-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid rgba(68, 61, 51, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 250, 241, 0.78);
+}
+
+.saved-words-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.saved-words-filters button,
+.saved-words-sort select,
+.saved-word-card button,
+.saved-words-danger button {
+  min-height: 40px;
+  border: 1px solid rgba(68, 61, 51, 0.16);
+  border-radius: 7px;
+  background: #fffaf1;
+  color: #4d483f;
+  font-weight: 820;
+  cursor: pointer;
+}
+
+.saved-words-filters button {
+  padding: 0 12px;
+}
+
+.saved-words-filters button.is-active {
+  border-color: #253428;
+  background: #253428;
+  color: #fffaf1;
+}
+
+.saved-words-filters span {
+  color: inherit;
+  opacity: 0.72;
+}
+
+.saved-words-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #746b5f;
+  font-size: 0.86rem;
+  font-weight: 820;
+}
+
+.saved-words-sort select {
+  padding: 0 34px 0 12px;
+}
+
+.saved-words-list {
+  display: grid;
+  gap: 10px;
+}
+
+.saved-word-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid rgba(68, 61, 51, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 250, 241, 0.76);
+  box-shadow: 0 14px 32px rgba(65, 55, 43, 0.06);
+}
+
+.saved-word-card h2 {
+  margin: 0 0 5px;
+  color: #24251f;
+  font-size: 1.2rem;
+  letter-spacing: 0;
+}
+
+.saved-word-card p,
+.saved-word-card small {
+  display: block;
+  margin: 0;
+  color: #6f675c;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.saved-word-card button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+}
+
+.saved-word-card button:hover,
+.saved-word-card button:focus-visible,
+.saved-words-danger button:hover,
+.saved-words-danger button:focus-visible,
+.saved-words-filters button:hover,
+.saved-words-filters button:focus-visible {
+  border-color: #4d7c0f;
+}
+
+.saved-words-danger {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.saved-words-danger button {
+  padding: 0 14px;
+  color: #9f3f2d;
+}
+
+.saved-words-empty {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  max-width: 620px;
+  padding: 28px;
+  border: 1px solid rgba(68, 61, 51, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 250, 241, 0.78);
+}
+
+.saved-words-empty h2 {
+  margin: 0;
+  color: #24251f;
+  font-size: 1.4rem;
+}
+
+.saved-words-empty p {
+  margin: 0;
+  color: #6f675c;
+  line-height: 1.75;
+}
+
+.saved-words-empty a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 7px;
+  background: #253428;
+  color: #fffaf1;
+  font-weight: 850;
 }
 
 .dictionary-builder {
@@ -1177,6 +1409,42 @@ textarea:focus {
   .seo-landing-benefits,
   .seo-landing-faqs {
     grid-template-columns: 1fr;
+  }
+
+  .bar-row {
+    grid-template-columns: minmax(0, 1fr) 56px;
+  }
+
+  .bar-row__word {
+    grid-column: 1 / -1;
+  }
+
+  .bar-row .saved-word-button {
+    grid-column: 1 / -1;
+    width: fit-content;
+  }
+
+  .saved-words-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .saved-words-sort {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .saved-words-sort select {
+    width: 100%;
+  }
+
+  .saved-word-card {
+    grid-template-columns: 1fr;
+  }
+
+  .saved-word-card button,
+  .saved-words-danger button {
+    width: 100%;
   }
 
   .navbar__nav .navbar__cta {
@@ -4255,6 +4523,7 @@ textarea:focus {
 
 .pattern-item,
 .phrase-row {
+  margin-top: 8px;
   padding: 11px 12px;
 }
 
@@ -4484,4 +4753,24 @@ textarea:focus {
     padding: 10px;
   }
 
+}
+
+/* Saved vocabulary overrides live late because the site has layered visual editions. */
+.bar-row {
+  grid-template-columns: minmax(105px, 0.34fr) minmax(0, 1fr) 36px auto;
+}
+
+.saved-word-button svg {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 900px) {
+  .bar-row {
+    grid-template-columns: minmax(0, 1fr) 56px;
+  }
+
+  .bar-row__word,
+  .bar-row .saved-word-button {
+    grid-column: 1 / -1;
+  }
 }

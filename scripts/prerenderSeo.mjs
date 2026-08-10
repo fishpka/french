@@ -39,7 +39,8 @@ function renderHead(html, config, page) {
   output = output.replace(/<title>.*?<\/title>/s, `<title>${escapeHtml(page.title)}</title>`);
   output = replaceOrInsert(output, /<meta\s+name="description"[^>]*>/, `<meta name="description" content="${escapeHtml(page.description)}" />`);
   output = replaceOrInsert(output, /<meta\s+name="keywords"[^>]*>/, `<meta name="keywords" content="${escapeHtml(page.keywords)}" />`);
-  output = replaceOrInsert(output, /<meta\s+name="robots"[^>]*>/, '<meta name="robots" content="index, follow, max-image-preview:large" />');
+  const robotsContent = page.index === false ? 'noindex, follow' : 'index, follow, max-image-preview:large';
+  output = replaceOrInsert(output, /<meta\s+name="robots"[^>]*>/, `<meta name="robots" content="${robotsContent}" />`);
   output = replaceOrInsert(output, /<link\s+rel="canonical"[^>]*>/, `<link rel="canonical" href="${canonicalUrl}" />`);
   output = replaceOrInsert(output, /<link\s+rel="alternate"\s+hreflang="zh-Hant"[^>]*>/, `<link rel="alternate" hreflang="zh-Hant" href="${canonicalUrl}" />`);
   output = replaceOrInsert(output, /<link\s+rel="alternate"\s+hreflang="x-default"[^>]*>/, `<link rel="alternate" hreflang="x-default" href="${canonicalUrl}" />`);
