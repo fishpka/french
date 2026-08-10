@@ -139,6 +139,19 @@ function renderBody(html, config, page) {
   return html.replace(/<div id="root"><\/div>/, renderStaticBody(config, page));
 }
 
+function prioritizeStylesheets(html) {
+  const stylesheetLinks = html.match(/^\s*<link\s+rel="stylesheet"[^>]*>\s*$/gm);
+  if (!stylesheetLinks?.length) return html;
+
+  let output = html;
+  stylesheetLinks.forEach((link) => {
+    output = output.replace(link, '');
+  });
+
+  const insertion = stylesheetLinks.map((link) => link.trim()).join('\n    ');
+  return output.replace(/(\s*<script\s+type="module")/, `\n    ${insertion}\n$1`);
+}
+
 const config = readSeoConfig();
 const sourceHtml = fs.readFileSync(path.join(repoPaths.distDir, 'index.html'), 'utf8');
 const homePage = config.pages.find((page) => page.path === '/');
@@ -146,7 +159,7 @@ const homePage = config.pages.find((page) => page.path === '/');
 if (homePage) {
   fs.writeFileSync(
     path.join(repoPaths.distDir, 'index.html'),
-    renderBody(renderHead(sourceHtml, config, homePage), config, homePage),
+    prioritizeStylesheets(renderBody(renderHead(sourceHtml, config, homePage), config, homePage)),
   );
 }
 
@@ -157,7 +170,7 @@ config.pages
     fs.mkdirSync(pageDir, { recursive: true });
     fs.writeFileSync(
       path.join(pageDir, 'index.html'),
-      renderBody(renderHead(sourceHtml, config, page), config, page),
+      prioritizeStylesheets(renderBody(renderHead(sourceHtml, config, page), config, page)),
     );
   });
 
