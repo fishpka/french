@@ -24,6 +24,28 @@ npm run dev
 npm run build
 ```
 
+## API Configuration And Security
+
+The frontend uses a Supabase anon key, which is expected to be public in browser JavaScript. Do not use a Supabase service-role key in this app.
+
+Required GitHub Pages build variable:
+
+```bash
+VITE_SUPABASE_ANON_KEY=<supabase anon public key>
+```
+
+Set it in GitHub repository Variables as `VITE_SUPABASE_ANON_KEY`. The deploy workflow intentionally does not include a hardcoded fallback key.
+
+Local development can use `.env`, but `.env` is ignored by git. Keep `.env.example` as the only tracked env template.
+
+Before relying on persistence in production, apply all SQL migrations in `supabase/migrations/`, especially:
+
+```bash
+supabase/migrations/004_add_save_analysis_quotas.sql
+```
+
+That migration limits save payloads, revokes direct inserts, and restricts the global Top 100 RPC to authenticated users.
+
 ## Optional spaCy Backend
 
 The frontend can call a local FastAPI service for French token analysis. This improves CEFR matching for inflected forms and helps filter proper nouns from Unknown/CEFR results.
