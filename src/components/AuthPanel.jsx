@@ -125,7 +125,7 @@ export default function AuthPanel({ session }) {
           </button>
         </div>
       </form>
-      <p>只儲存分析後的詞語、詞頻、CEFR 與統計數據，不儲存原文。</p>
+      <p>輸入 Email 與密碼，點擊「註冊」按鈕，並完成電子郵件驗證，即可成功註冊。</p>
       {status ? <small>{status}</small> : null}
     </section>
   );
