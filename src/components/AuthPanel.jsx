@@ -25,7 +25,13 @@ export default function AuthPanel({ session }) {
 
     try {
       const { error } = mode === 'sign-up'
-        ? await supabase.auth.signUp({ email, password })
+        ? await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: new URL(import.meta.env.BASE_URL, window.location.origin).href,
+          },
+        })
         : await supabase.auth.signInWithPassword({ email, password });
 
       if (error) {

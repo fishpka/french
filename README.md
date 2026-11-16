@@ -38,6 +38,25 @@ Set it in GitHub repository Variables as `VITE_SUPABASE_ANON_KEY`. The deploy wo
 
 Local development can use `.env`, but `.env` is ignored by git. Keep `.env.example` as the only tracked env template.
 
+### Email confirmation redirects
+
+In Supabase Dashboard → Authentication → URL Configuration, set:
+
+- Site URL: `https://fishpka.github.io/french/`
+- Redirect URLs: add `https://fishpka.github.io/french/`
+- For local signup testing, also add your exact dev URL, such as `http://localhost:5173/french/`.
+
+Signup explicitly requests the current origin plus Vite's `/french/` base path as
+`emailRedirectTo`. Supabase must allow that URL; otherwise it can fall back to the
+Site URL. A Site URL left at `http://localhost:3000` can send confirmation clicks
+to an unavailable local server.
+
+Keep the confirmation email button linked to `{{ .ConfirmationURL }}` so that it
+verifies the email before returning to the app. Previously sent emails may still
+contain the old destination. If verification already succeeded before the failed
+redirect, return to the app and try signing in; otherwise request a fresh
+confirmation email after correcting the configuration.
+
 Before relying on persistence in production, apply all SQL migrations in `supabase/migrations/`, especially:
 
 ```bash
