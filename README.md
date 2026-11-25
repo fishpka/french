@@ -65,6 +65,14 @@ supabase/migrations/004_add_save_analysis_quotas.sql
 
 That migration limits save payloads, revokes direct inserts, and restricts the global Top 100 RPC to authenticated users.
 
+Also apply `supabase/migrations/005_restrict_global_top_words_access.sql` in
+Supabase SQL Editor. It revokes the inherited `PUBLIC` and explicit `anon`
+execute grants for `get_global_top_words`, grants access to `authenticated`,
+and checks `auth.uid()` inside the function. Deploying the frontend to GitHub
+Pages does not apply database migrations. After applying it, verify that an
+anonymous RPC request is denied and a signed-in request still returns the
+global Top 100 results.
+
 ## Optional spaCy Backend
 
 The frontend can call a local FastAPI service for French token analysis. This improves CEFR matching for inflected forms and helps filter proper nouns from Unknown/CEFR results.
